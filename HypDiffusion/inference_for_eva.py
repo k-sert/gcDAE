@@ -26,7 +26,7 @@ import argparse
 import os
 import sys
 import shutil
-sys.path.insert(0, '/data2/mhf/DXL/Lingxiao/Codes/HypDiffusion')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # local path for importing data_configs and paths_config
 
 # we utilize geoopt package for hyperbolic calculation
 
