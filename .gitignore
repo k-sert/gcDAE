@@ -75,3 +75,5 @@ local_settings.py
 *.swp
 .cache/
 .bak/
+Stage1/src/taming-transformers
+.out
