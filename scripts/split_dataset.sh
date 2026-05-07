@@ -15,7 +15,7 @@ source activate stage1_env
 cd ${SLURM_SUBMIT_DIR}
 
 # CUB-200: stratified 80/20 split per class.
-python scripts/split_dataset.py \
+python split_dataset.py \
     --src /scratch-shared/scur0164/datasets/NABirds/CUB_200_2011/images \
     --dst /scratch-shared/scur0164/datasets/cub200_split \
     --test-size 0.2 \
@@ -23,7 +23,7 @@ python scripts/split_dataset.py \
     --copy
 
 # Caltech-256: stratified 80/20 split per class.
-python scripts/split_dataset.py \
+python split_dataset.py \
     --src /scratch-shared/scur0164/datasets/Caltech_256 \
     --dst /scratch-shared/scur0164/datasets/caltech256_split \
     --test-size 0.2 \
