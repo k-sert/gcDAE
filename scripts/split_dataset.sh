@@ -7,7 +7,10 @@
 #SBATCH --time=00:30:00
 #SBATCH --output=logs/split_datasets_%A.out
 
-
+module purge
+module load 2025
+module load Anaconda3/2025.06-1
+source activate stage1_env
 
 cd ${SLURM_SUBMIT_DIR}
 
