@@ -76,4 +76,6 @@ local_settings.py
 .cache/
 .bak/
 Stage1/src/taming-transformers
-.out
+logs/
+scripts/logs/
+*.out
