@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=thin
+#SBATCH --partition=staging
 #SBATCH --job-name=split_datasets
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
