@@ -220,14 +220,6 @@ class FrozenCLIPT5Encoder(AbstractEncoder):
         t5_z = self.t5_encoder.encode(text)
         return [clip_z, t5_z]
     
-import sys
-sys.path.append("./dinov2")
-import hubconf
-config_path = './configs/v1.yaml'
-config = OmegaConf.load(config_path)
-DINOv2_weight_path = config.model.params.cond_stage_config.weight
-
-
 class FrozenDinoV2Encoder(AbstractEncoder):
     """
     Uses the DINOv2 encoder for image
@@ -235,6 +227,11 @@ class FrozenDinoV2Encoder(AbstractEncoder):
 
     def __init__(self, device="cuda", freeze=True):
         super().__init__()
+        import sys
+        sys.path.append("./dinov2")
+        import hubconf
+        _config = OmegaConf.load('./configs/v1.yaml')
+        DINOv2_weight_path = _config.model.params.cond_stage_config.weight
         dinov2 = hubconf.dinov2_vitg14()
         state_dict = torch.load(DINOv2_weight_path)
         dinov2.load_state_dict(state_dict, strict=False)
