@@ -1275,7 +1275,10 @@ class LatentDiffusion(DDPM):
 
     def configure_optimizers(self):
         lr = self.learning_rate
-        params = list(self.model.parameters())
+        # Freeze UNet (SD v2.1) — only the CLIP mapper/Transformer block is trainable per paper
+        for param in self.model.parameters():
+            param.requires_grad = False
+        params = []
         if self.cond_stage_trainable:
             print(f"{self.__class__.__name__}: Also optimizing conditioner params!")
             params = params + list(self.cond_stage_model.final_ln.parameters())+list(
@@ -1283,6 +1286,12 @@ class LatentDiffusion(DDPM):
         if self.learn_logvar:
             print('Diffusion model optimizing logvar')
             params.append(self.logvar)
+        unet_params = sum(p.numel() for p in self.model.parameters())
+        trainable_params = sum(p.numel() for p in params)
+        print(f"UNet params (frozen): {unet_params:,}")
+        print(f"Trainable params (mapper only): {trainable_params:,}")
+        assert all(not p.requires_grad for p in self.model.parameters()), \
+            "UNet has trainable params — freeze failed!"
         opt = torch.optim.AdamW(params, lr=lr)
         if self.use_scheduler:
             assert 'target' in self.scheduler_config
