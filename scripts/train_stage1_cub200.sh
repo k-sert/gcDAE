@@ -10,8 +10,9 @@
 
 module purge
 module load 2025
-module load Anaconda3/2025.06-1
-source activate stage1_env
+module load Miniconda3/25.5.1-1
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate stage1_env
 
 cd ${SLURM_SUBMIT_DIR}/Stage1
 
