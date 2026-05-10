@@ -488,8 +488,9 @@ if __name__ == "__main__":
     lightning_config = config.pop("lightning", OmegaConf.create())
     # merge trainer cli with config
     trainer_config = lightning_config.get("trainer", OmegaConf.create())
-    # default to ddp
-    trainer_config["accelerator"] = "ddp"
+    # default to gpu + ddp (split into separate params in PL 1.7+)
+    trainer_config["accelerator"] = "gpu"
+    trainer_config["strategy"] = "ddp"
     for k in nondefault_trainer_args(opt):
         trainer_config[k] = getattr(opt, k)
     if not "gpus" in trainer_config:
