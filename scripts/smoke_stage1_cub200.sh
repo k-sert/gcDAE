@@ -12,7 +12,7 @@ module purge
 module load 2025
 module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
-conda activate stage1_env
+conda activate /home/scur0164/conda_envs/stage1_env
 
 cd ${SLURM_SUBMIT_DIR}/Stage1
 
