@@ -13,7 +13,7 @@ module load 2025
 module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage1_env
-pip install open-clip-torch
+
 
 cd ${SLURM_SUBMIT_DIR}/Stage1
 
