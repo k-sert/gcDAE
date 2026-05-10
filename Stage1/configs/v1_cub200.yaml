@@ -105,4 +105,4 @@ lightning:
   trainer:
     max_epochs: 100
     num_nodes: 1
-    devices: "0,1"
+    gpus: "0,1"
