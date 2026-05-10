@@ -13,8 +13,10 @@ module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage1_env
 
-# Upgrade PyTorch to version with H100 (sm_90) support, CUDA 12.1
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# Force-reinstall PyTorch with H100 (sm_90) support, CUDA 12.1
+# --force-reinstall needed because conda-installed torch takes precedence over pip
+pip install --force-reinstall --no-deps torch==2.5.1+cu121 torchvision==0.20.1+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
 
 # Upgrade PyTorch Lightning and torchmetrics to compatible versions
 pip install pytorch-lightning==1.8.5.post0 torchmetrics==0.11.0
