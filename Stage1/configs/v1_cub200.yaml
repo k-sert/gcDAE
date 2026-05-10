@@ -93,8 +93,17 @@ data:
               dataset_type: cub200_encode
 
 lightning:
+  callbacks:
+    early_stopping:
+      target: pytorch_lightning.callbacks.EarlyStopping
+      params:
+        monitor: val/loss_simple_ema
+        patience: 10
+        min_delta: 0.001
+        mode: min
+        verbose: True
   trainer:
-    max_epochs: 300
+    max_epochs: 100
     num_nodes: 1
     accelerator: 'gpu'
     gpus: "0,1"
