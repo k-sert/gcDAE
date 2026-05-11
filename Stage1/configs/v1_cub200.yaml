@@ -30,7 +30,7 @@ model:
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
-        use_checkpoint: False
+        use_checkpoint: True
         use_fp16: False
         image_size: 32 # unused
         in_channels: 4
