@@ -1288,7 +1288,8 @@ class LatentDiffusion(DDPM):
         trainable_params = sum(p.numel() for p in params)
         print(f"UNet params (frozen): {unet_params:,}")
         print(f"Trainable params (mapper only): {trainable_params:,}")
-        assert all(p not in params for p in self.model.parameters()), \
+        param_ids = {id(p) for p in params}
+        assert all(id(p) not in param_ids for p in self.model.parameters()), \
             "UNet params leaked into optimizer!"
         opt = torch.optim.AdamW(params, lr=lr)
         if self.use_scheduler:
