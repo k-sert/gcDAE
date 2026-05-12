@@ -13,8 +13,8 @@ module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage2_env
 
-# Downgrade scipy to version compiled with older GCC (avoids GLIBCXX_3.4.30 requirement)
-pip install --force-reinstall "scipy==1.7.3"
+# Make conda env's libstdc++ take precedence over system /lib64/libstdc++.so.6
+export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 
 # Install missing packages (torch and transformers already present)
 pip install geoopt==0.5.0

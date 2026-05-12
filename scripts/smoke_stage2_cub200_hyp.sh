@@ -13,6 +13,7 @@ module load 2025
 module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage2_env
+export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 
 cd ${SLURM_SUBMIT_DIR}/Stage2
 
