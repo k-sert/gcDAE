@@ -26,5 +26,5 @@ python -u main.py \
     --logdir /scratch-shared/scur0164/checkpoints/Stage1/cub200 \
     --pretrained_model ${SD_CKPT} \
     --scale_lr False \
-    --resume /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-12T09-05-00_v1_cub200/checkpoints/epoch=000019.ckpt
+    --resume /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-12T09-05-00_v1_cub200/checkpoints/epoch=000019_fixed.ckpt
 
