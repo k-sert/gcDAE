@@ -707,5 +707,5 @@ if __name__ == "__main__":
             melk()
             raise
     if not opt.no_test and not trainer.interrupted:
-        if hasattr(model, 'test_step'):
+        if type(model).test_step is not pl.LightningModule.test_step:
             trainer.test(model, data)
