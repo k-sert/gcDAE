@@ -13,19 +13,20 @@ module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage2_env
 
-# Install missing packages
-pip install transformers==4.30.0
-pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 \
-    --index-url https://download.pytorch.org/whl/cu118
+# Install missing packages (torch and transformers already present)
+pip install geoopt==0.5.0
+pip install albumentations==1.3.0
 
 echo "Verifying:"
 python -c "
 import torch
 import transformers
 import geoopt
+import albumentations
 print('torch:', torch.__version__)
 print('transformers:', transformers.__version__)
 print('geoopt:', geoopt.__version__)
+print('albumentations:', albumentations.__version__)
 print('CUDA available:', torch.cuda.is_available())
 print('H100 sm_90 supported:', torch.cuda.get_arch_list())
 "
