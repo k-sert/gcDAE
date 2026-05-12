@@ -26,7 +26,6 @@ def main():
 		create_initial_experiment_dir(opts)
 
 	coach = Coach(opts, previous_train_ckpt)
-	coach.train()
 
 
 def load_train_checkpoint(opts):
