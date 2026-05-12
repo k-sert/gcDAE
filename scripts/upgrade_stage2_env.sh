@@ -13,8 +13,8 @@ module load Miniconda3/25.5.1-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate /home/scur0164/conda_envs/stage2_env
 
-# Fix libstdc++ version mismatch (GLIBCXX_3.4.30 required by scipy)
-conda install -y -c conda-forge libstdcxx-ng
+# Reinstall scipy via conda-forge to fix GLIBCXX_3.4.30 mismatch
+conda install -y -c conda-forge scipy
 
 # Install missing packages (torch and transformers already present)
 pip install geoopt==0.5.0
