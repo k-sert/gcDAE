@@ -707,4 +707,5 @@ if __name__ == "__main__":
             melk()
             raise
     if not opt.no_test and not trainer.interrupted:
-        trainer.test(model, data)
+        if hasattr(model, 'test_step'):
+            trainer.test(model, data)

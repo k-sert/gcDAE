@@ -98,7 +98,7 @@ lightning:
       target: pytorch_lightning.callbacks.EarlyStopping
       params:
         monitor: val/loss_simple_ema
-        patience: 10
+        patience: 30
         min_delta: 0.001
         mode: min
         verbose: True
