@@ -26,7 +26,7 @@ python scripts/train.py \
     --psp_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=/scratch-shared/scur0164/checkpoints/Stage2/cub200_hyp_smoke \
-    --hyperbolic=True \
+    --hyperbolic \
     --c=1.0 \
     --feature_size=512 \
     --transformer_layers=5 \

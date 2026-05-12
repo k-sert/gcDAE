@@ -17,7 +17,7 @@ class TrainOptions:
             '--encoder_type', default='CLIPImageEmbedder', type=str, help='Which encoder to use')
         self.parser.add_argument(
             '--encoder_version', default='/data2/mhf/DXL/Lingxiao/Cache/huggingface/hub/models--openai--clip-vit-large-patch14', type=str, help='Which encoder version to use')
-        self.parser.add_argument('--hyperbolic', default=False, type=bool,
+        self.parser.add_argument('--hyperbolic', action='store_true',
                                  help='Whether the model performs in hyperbolic space')
         self.parser.add_argument('--input_nc', default=3, type=int,
                                  help='Number of input image channels to the psp encoder')
