@@ -18,7 +18,7 @@ cd ${SLURM_SUBMIT_DIR}/Stage2
 
 # TODO: Set to best Stage 1 checkpoint after Stage 1 training completes
 # Find it with: ls /scratch-shared/scur0164/checkpoints/Stage1/caltech256/*/checkpoints/
-STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/caltech256/PLACEHOLDER/checkpoints/epoch=XXXXXX.ckpt
+STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-12T09-05-27_v1_caltech256/checkpoints/epoch=000004.ckpt
 
 python scripts/train.py \
     --dataset_type=caltech256_encode \
