@@ -247,13 +247,14 @@ class Coach:
                 self.scheduler.step()
 
                 if self.global_step % self.opts.board_interval == 0:
-                    self.print_metrics(loss_dict, prefix='train')
-                    self.log_metrics(loss_dict, prefix='train')
                     if self.global_step != 0 and data_size != 0:
+                        loss_dict['accuracy'] = 100.0 * correct / data_size
                         print("Test set: Accuracy: {}/{} ({:.0f}%)\n".format(correct,
                               data_size, 100.0*correct/data_size))
                         correct = 0
                         data_size = 0
+                    self.print_metrics(loss_dict, prefix='train')
+                    self.log_metrics(loss_dict, prefix='train')
 
 
                 if self.global_step % self.opts.save_interval == 0 or self.global_step == self.opts.max_steps:

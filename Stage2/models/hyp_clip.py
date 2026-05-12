@@ -142,6 +142,7 @@ class hae_clip(nn.Module):
         # Define architecture
         self.encoder = self.set_encoder(self.opts.encoder_version)
         self.feature_shape = self.opts.feature_size
+        self.curvature = torch.tensor(-self.opts.c, dtype=torch.float32)
         if self.opts.dataset_type == 'flowers_encode':
             self.num_classes = 102  # animal_faces 151, flowers 102
         elif self.opts.dataset_type == 'flowers_encode_eva':
@@ -160,6 +161,10 @@ class hae_clip(nn.Module):
             self.num_classes = 555
         elif self.opts.dataset_type == 'nabirds_encode_eva':
             self.num_classes = 444
+        elif self.opts.dataset_type == 'cub200_encode':
+            self.num_classes = 200
+        elif self.opts.dataset_type == 'caltech256_encode':
+            self.num_classes = 257
         else:
             Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
         self.transformer_encoder = Transformer(
@@ -191,14 +196,13 @@ class hae_clip(nn.Module):
         if self.opts.hyperbolic:
             self.hyperbolic_linear = MobiusLinear(self.feature_shape,
                                                   self.feature_shape,
-                                                  # This computes an exmap0 after the operation, where the linear
-                                                  # operation operates in the Euclidean space.
                                                   hyperbolic_input=False,
                                                   hyperbolic_bias=True,
-                                                  nonlin=None,  # For now
+                                                  nonlin=None,
+                                                  k=self.curvature,
                                                   )
             self.hyp_mlr = HyperbolicMLR(
-                ball_dim=self.feature_shape, n_classes=self.num_classes, c=1)
+                ball_dim=self.feature_shape, n_classes=self.num_classes, c=self.curvature.abs())
         else:
             self.linear = LogisticRegression(
                 self.feature_shape, self.feature_shape)
