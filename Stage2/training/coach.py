@@ -359,7 +359,7 @@ class Coach:
             loss_cosine = F.cosine_similarity(ocodes.squeeze(1), feature_euc.squeeze(1), dim=1)
             loss_cosine_mean = torch.mean(1-loss_cosine)
             loss_dict['loss_cosine'] = float(loss_cosine_mean)
-            loss += loss_cosine_mean * reverse_lambda
+            loss += loss_cosine_mean * self.opts.cosine_lambda
         loss += 0. * sum(p.sum() for p in self.net.module.parameters())
         '''
 		if self.opts.contrastive_lambda > 0:

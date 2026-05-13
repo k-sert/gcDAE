@@ -31,20 +31,20 @@ python scripts/train.py \
     --feature_size=512 \
     --transformer_layers=5 \
     --train_all \
-    --learning_rate=0.0001 \
+    --learning_rate=0.001 \
     --step_size=5000 \
-    --gamma=0.3 \
+    --gamma=0.5 \
     --optim_name=adam \
     --batch_size=256 \
     --test_batch_size=64 \
     --workers=8 \
     --test_workers=4 \
-    --max_steps=30000 \
-    --save_interval=1000 \
+    --max_steps=100000 \
+    --save_interval=5000 \
     --board_interval=50 \
     --val_interval=999999 \
-    --hyperbolic_lambda=0.3 \
-    --reverse_lambda=5 \
+    --hyperbolic_lambda=1.0 \
+    --reverse_lambda=0.1 \
     --cosine_lambda=0.1 \
     --ngpus-per-node 1 \
     --dist-url 'tcp://localhost:10032' \
