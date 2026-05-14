@@ -1,4 +1,8 @@
 dataset_paths = {
+    'cub200_smoke_train': '/scratch-shared/scur0164/datasets/cub200_smoke/train',
+    'cub200_smoke_test': '/scratch-shared/scur0164/datasets/cub200_smoke/test',
+    'caltech256_smoke_train': '/scratch-shared/scur0164/datasets/caltech256_smoke/train',
+    'caltech256_smoke_test': '/scratch-shared/scur0164/datasets/caltech256_smoke/test',
     'cub200_train': '/scratch-shared/scur0164/datasets/cub200_split/train',
     'cub200_test': '/scratch-shared/scur0164/datasets/cub200_split/test',
     'caltech256_train': '/scratch-shared/scur0164/datasets/caltech256_split/train',
