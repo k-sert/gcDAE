@@ -185,9 +185,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--src-test", type=Path, default=None)
     parser.add_argument("--dst", type=Path, default=None)
     parser.add_argument("--classes", type=int, default=5)
-    parser.add_argument("--train-images-per-class", type=int, default=5)
-    parser.add_argument("--test-images-per-class", type=int, default=2)
-    parser.add_argument("--seed", type=int, default=23)
+    parser.add_argument("--train-images-per-class", type=int, default=10)
+    parser.add_argument("--test-images-per-class", type=int, default=4)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--symlink",
         action="store_true",
