@@ -49,15 +49,18 @@ def find_classes(directory):
 
 class ImagesDataset(Dataset):
 
-	def __init__(self, dataset_type):
+	def __init__(self, dataset_type, split="train"):
 		if dataset_type not in data_configs.DATASETS.keys():
-				Exception(f'{dataset_type} is not a valid dataset_type')
-		print(f'Loading dataset for {dataset_type}')
+			raise ValueError(f'{dataset_type} is not a valid dataset_type')
+		if split not in ("train", "test"):
+			raise ValueError(f"{split} is not a valid split. Expected 'train' or 'test'.")
+		print(f'Loading {split} dataset for {dataset_type}')
 		self.dataset_type = dataset_type
+		self.split = split
 		dataset_args = data_configs.DATASETS[dataset_type]
 		transforms_dict = dataset_args['transforms']().get_transforms()
-		source_root = dataset_args['train_source_root']
-		target_root = dataset_args['train_target_root']
+		source_root = dataset_args[f'{split}_source_root']
+		target_root = dataset_args[f'{split}_target_root']
 		target_transform = transforms_dict['transform_gt_train']
 		source_transform = transforms_dict['transform_source']
 		train_transform = transforms_dict['transform_train']
