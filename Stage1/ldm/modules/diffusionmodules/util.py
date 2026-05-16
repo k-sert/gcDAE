@@ -114,6 +114,7 @@ def checkpoint(func, inputs, params, flag):
     """
     if flag:
         inputs = inputs[:2]
+        params = tuple(p for p in params if p.requires_grad)
         args = tuple(inputs) + tuple(params)
         return CheckpointFunction.apply(func, len(inputs), *args)
         # return CheckpointFunction.apply(func, 2, *args)
