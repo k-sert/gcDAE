@@ -1,7 +1,9 @@
 dataset_paths = {
     'cub200_train': '/scratch-shared/scur0164/datasets/cub200_split/train',
+    'cub200_val': '/scratch-shared/scur0164/datasets/cub200_split/val',
     'cub200_test': '/scratch-shared/scur0164/datasets/cub200_split/test',
     'caltech256_train': '/scratch-shared/scur0164/datasets/caltech256_split/train',
+    'caltech256_val': '/scratch-shared/scur0164/datasets/caltech256_split/val',
     'caltech256_test': '/scratch-shared/scur0164/datasets/caltech256_split/test',
     'celeba_train': '',
     'celeba_test': '/local/rcs/ll3504/datasets/CelebAMask-HQ/CelebA-HQ-img',
