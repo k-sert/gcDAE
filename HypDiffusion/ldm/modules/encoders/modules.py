@@ -432,6 +432,10 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
             self.num_classes = 1
         elif self.opts.dataset_type == 'nabirds_encode':
             self.num_classes = 555
+        elif self.opts.dataset_type == 'cub200_encode':
+            self.num_classes = 200
+        elif self.opts.dataset_type == 'caltech256_encode':
+            self.num_classes = 257
         else:
             Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
         self.transformer_encoder = Transformer(
@@ -460,6 +464,8 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         self.linear_encoder = LogisticRegression(1024, self.feature_shape)
         self.linear_decoder = LogisticRegression(self.feature_shape, 1024)
         # self.mlp = MLP(512)
+        self.c = getattr(self.opts, 'c', 1.0)
+        self.curvature = torch.tensor(-self.c, dtype=torch.float32)
         print('Use hyperbolic:', self.opts.hyperbolic)
         if self.opts.hyperbolic:
             self.hyperbolic_linear = MobiusLinear(self.feature_shape,
@@ -469,9 +475,10 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                                                   hyperbolic_input=False,
                                                   hyperbolic_bias=True,
                                                   nonlin=None,  # For now
+                                                  k=self.curvature,
                                                   )
             self.hyp_mlr = HyperbolicMLR(
-                ball_dim=self.feature_shape, n_classes=self.num_classes, c=1)
+                ball_dim=self.feature_shape, n_classes=self.num_classes, c=self.curvature.abs())
         else:
             self.linear = LogisticRegression(
                 self.feature_shape, self.feature_shape)
@@ -597,4 +604,3 @@ if __name__ == "__main__":
     from ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
-
