@@ -78,8 +78,10 @@ class TrainOptions:
                                  help='Moco-based feature similarity loss multiplier factor')
         self.parser.add_argument('--contrastive_lambda', default=0.1, type=float,
                                  help='Un/Supervised Contrastive loss factor for hyperbolic feature learning')
+        self.parser.add_argument('--geometry_lambda', default=None, type=float,
+                                 help='Supervised classification loss factor for the selected Stage II geometry')
         self.parser.add_argument('--hyperbolic_lambda', default=0.1, type=float,
-                                 help='Supervised hyperbolic loss for hyperbolic feature learning')
+                                 help='Deprecated: use --geometry_lambda')
         self.parser.add_argument('--reverse_lambda', default=0.1, type=float,
                                  help='Project back to the original Euclidean space')
         self.parser.add_argument('--cosine_lambda', default=0.1, type=float,
@@ -195,4 +197,8 @@ class TrainOptions:
             opts.geometry = 'hyperbolic' if opts.hyperbolic else 'euclidean'
         else:
             opts.hyperbolic = opts.geometry == 'hyperbolic'
+        if opts.geometry_lambda is None:
+            opts.geometry_lambda = opts.hyperbolic_lambda
+        else:
+            opts.hyperbolic_lambda = opts.geometry_lambda
         return opts
