@@ -43,7 +43,9 @@ python scripts/train.py \
     --max_steps=100000 \
     --save_interval=5000 \
     --board_interval=50 \
-    --val_interval=999999 \
+    --val_interval=200 \
+    --early_stop_patience=20 \
+    --early_stop_min_delta=0.0001 \
     --geometry_lambda=1.0 \
     --reverse_lambda=0.1 \
     --cosine_lambda=0.1 \
