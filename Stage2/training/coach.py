@@ -20,6 +20,7 @@ import torch
 import os
 import random
 import time
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import warnings
@@ -32,7 +33,14 @@ import torch.backends.cudnn as cudnn
 matplotlib.use('Agg')
 
 random.seed(0)
+np.random.seed(0)
 torch.manual_seed(0)
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
 
 
 class Coach:
@@ -54,16 +62,7 @@ class Coach:
             self.wb_logger = WBLogger(self.opts)
 
         if self.opts.seed is not None:
-            random.seed(self.opts.seed)
-            torch.manual_seed(self.opts.seed)
-            cudnn.deterministic = True
-            warnings.warn(
-                "You have chosen to seed training. "
-                "This will turn on the CUDNN deterministic setting, "
-                "which can slow down your training considerably! "
-                "You may see unexpected behavior when restarting "
-                "from checkpoints."
-            )
+            self.seed_training(warn=True)
 
         if self.opts.gpu is not None:
             warnings.warn(
@@ -113,7 +112,25 @@ class Coach:
                 ckpt['discriminator_optimizer_state_dict'])
         print(f'Resuming training from step {self.global_step}')
 
+    def seed_training(self, warn=False):
+        random.seed(self.opts.seed)
+        np.random.seed(self.opts.seed)
+        torch.manual_seed(self.opts.seed)
+        torch.cuda.manual_seed_all(self.opts.seed)
+        cudnn.deterministic = True
+        cudnn.benchmark = False
+        if warn:
+            warnings.warn(
+                "You have chosen to seed training. "
+                "This will turn on the CUDNN deterministic setting, "
+                "which can slow down your training considerably! "
+                "You may see unexpected behavior when restarting "
+                "from checkpoints."
+            )
+
     def train(self, gpu, cpu, ngpus_per_node, prev_train_checkpoint=None):
+        if self.opts.seed is not None:
+            self.seed_training()
         self.opts.gpu = gpu
         self.opts.device = torch.device("cuda:{}".format(gpu))
 
@@ -193,26 +210,40 @@ class Coach:
         # Initialize dataset
         self.train_dataset, self.val_dataset = self.configure_datasets()
         if self.opts.distributed:
+            sampler_seed = self.opts.seed if self.opts.seed is not None else 0
             train_sampler = torch.utils.data.distributed.DistributedSampler(
-                self.train_dataset)
+                self.train_dataset, seed=sampler_seed)
             val_sampler = torch.utils.data.distributed.DistributedSampler(
                 self.val_dataset, shuffle=False)
         else:
             train_sampler = None
             val_sampler = None
+        train_generator = None
+        val_generator = None
+        worker_init_fn = None
+        if self.opts.seed is not None:
+            train_generator = torch.Generator()
+            train_generator.manual_seed(self.opts.seed)
+            val_generator = torch.Generator()
+            val_generator.manual_seed(self.opts.seed + 1)
+            worker_init_fn = seed_worker
         self.train_dataloader = DataLoader(self.train_dataset,
                                            batch_size=self.opts.batch_size,
                                            shuffle=(train_sampler is None),
                                            num_workers=int(self.opts.workers),
                                            sampler=train_sampler,
-                                           drop_last=True)
+                                           drop_last=True,
+                                           worker_init_fn=worker_init_fn,
+                                           generator=train_generator)
         self.val_dataloader = DataLoader(self.val_dataset,
                                          batch_size=self.opts.test_batch_size,
                                          shuffle=False,
                                          num_workers=int(
                                              self.opts.test_workers),
                                          sampler=val_sampler,
-                                         drop_last=True)
+                                         drop_last=True,
+                                         worker_init_fn=worker_init_fn,
+                                         generator=val_generator)
         
 
         # Initialize logger
