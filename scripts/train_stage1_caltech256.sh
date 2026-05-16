@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu_a100
-#SBATCH --gpus=2
+#SBATCH --gpus-per-node=2
+#SBATCH --ntasks-per-node=2
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=stage1_caltech256
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --time=48:00:00
+#SBATCH --time=01:00:00
 #SBATCH --output=logs/stage1_caltech256_%A.out
 
 module purge
@@ -21,8 +21,9 @@ cd ${SLURM_SUBMIT_DIR}/Stage1
 #   ls /scratch-shared/scur0164/checkpoints/v2-1_512-ema-pruned.ckpt
 SD_CKPT=/scratch-shared/scur0164/checkpoints/v2-1_512-ema-pruned.ckpt
 
-python -u main.py \
+srun python -u main.py \
     --base configs/v1_caltech256.yaml \
     --logdir /scratch-shared/scur0164/checkpoints/Stage1/caltech256 \
     --pretrained_model ${SD_CKPT} \
-    --scale_lr False
+    --scale_lr False \
+    --max_epochs 1
