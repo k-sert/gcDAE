@@ -31,7 +31,7 @@ python scripts/train.py \
     --codecarbon_project_name=train_stage2_cub200_euc \
     --geometry euclidean \
     --feature_size=512 \
-    --transformer_layers=5 \
+    --transformer_layers=30 \
     --train_all \
     --learning_rate=0.0005 \
     --step_size=5000 \

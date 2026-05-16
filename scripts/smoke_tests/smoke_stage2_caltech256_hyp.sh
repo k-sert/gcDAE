@@ -29,7 +29,7 @@ python scripts/train.py \
     --geometry hyperbolic \
     --c=1 \
     --feature_size=512 \
-    --transformer_layers=5 \
+    --transformer_layers=30 \
     --train_all \
     --learning_rate=0.0001 \
     --step_size=2 \

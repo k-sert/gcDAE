@@ -32,7 +32,7 @@ python scripts/train.py \
     --geometry spherical \
     --c=10 \
     --feature_size=512 \
-    --transformer_layers=5 \
+    --transformer_layers=30 \
     --train_all \
     --learning_rate=0.0005 \
     --step_size=5000 \

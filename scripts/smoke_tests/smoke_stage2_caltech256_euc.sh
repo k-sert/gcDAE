@@ -28,7 +28,7 @@ python scripts/train.py \
     --seed 23 \
     --geometry euclidean \
     --feature_size=512 \
-    --transformer_layers=5 \
+    --transformer_layers=30 \
     --train_all \
     --learning_rate=0.0001 \
     --step_size=2 \
