@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_h100
+#SBATCH --partition=gpu_a100
 #SBATCH --gpus=2
 #SBATCH --job-name=stage1_cub200
 #SBATCH --ntasks=1
