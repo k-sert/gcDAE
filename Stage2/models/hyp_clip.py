@@ -134,6 +134,45 @@ class FrozenCLIPImageEmbedder(AbstractEncoder):
         return self(image, inv)
 
 
+class EuclideanGeometryHead:
+    def __init__(self, linear, classifier):
+        self.linear = linear
+        self.classifier = classifier
+
+    def __call__(self, feature):
+        feature_dist = self.linear(feature)
+        return self.from_geometry(feature_dist)
+
+    def from_geometry(self, feature_dist):
+        logits = F.log_softmax(self.classifier(feature_dist), dim=-1)
+        feature_euc = feature_dist
+        return logits, feature_dist, feature_euc
+
+
+class HyperbolicGeometryHead:
+    def __init__(self, hyperbolic_linear, classifier):
+        self.hyperbolic_linear = hyperbolic_linear
+        self.classifier = classifier
+
+    def __call__(self, feature):
+        feature_dist = self.hyperbolic_linear(feature)
+        return self.from_geometry(feature_dist)
+
+    def from_geometry(self, feature_dist):
+        logits = F.log_softmax(
+            self.classifier(feature_dist, self.classifier.c), dim=-1)
+        feature_euc = gmath.logmap0(
+            feature_dist,
+            k=torch.tensor(-float(self.classifier.c)).type_as(feature_dist))
+        return logits, feature_dist, feature_euc
+
+
+class SphericalGeometryHead:
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(
+            'Spherical Stage II geometry is not implemented yet.')
+
+
 class hae_clip(nn.Module):
 
     def __init__(self, opts):
@@ -191,9 +230,12 @@ class hae_clip(nn.Module):
                 1,
             )
         
-        # self.mlp = MLP(512)
-        print('Use hyperbolic:', self.opts.hyperbolic)
-        if self.opts.hyperbolic:
+        self.geometry = getattr(self.opts, 'geometry', None)
+        if self.geometry is None:
+            self.geometry = 'hyperbolic' if self.opts.hyperbolic else 'euclidean'
+        self.opts.hyperbolic = self.geometry == 'hyperbolic'
+        print('Stage II geometry:', self.geometry)
+        if self.geometry == 'hyperbolic':
             self.hyperbolic_linear = MobiusLinear(self.feature_shape,
                                                   self.feature_shape,
                                                   hyperbolic_input=False,
@@ -203,11 +245,18 @@ class hae_clip(nn.Module):
                                                   )
             self.hyp_mlr = HyperbolicMLR(
                 ball_dim=self.feature_shape, n_classes=self.num_classes, c=self.curvature.abs())
-        else:
+            self.geometry_head = HyperbolicGeometryHead(
+                self.hyperbolic_linear, self.hyp_mlr)
+        elif self.geometry == 'euclidean':
             self.linear = LogisticRegression(
                 self.feature_shape, self.feature_shape)
             self.euc_mlr = LogisticRegression(
                 n_inputs=self.feature_shape, n_outputs=self.num_classes)
+            self.geometry_head = EuclideanGeometryHead(self.linear, self.euc_mlr)
+        elif self.geometry == 'spherical':
+            self.geometry_head = SphericalGeometryHead()
+        else:
+            raise ValueError(f'{self.geometry} is not a valid Stage II geometry')
         # Load weights if needed
         self.load_weights()
 
@@ -231,16 +280,19 @@ class hae_clip(nn.Module):
                 name = k.replace('module.', '')
                 new_state_dict[name] = v
             ckpt['state_dict'] = new_state_dict
-            if self.opts.hyperbolic:
+            if self.geometry == 'hyperbolic':
                 self.hyperbolic_linear.load_state_dict(
                     get_keys(ckpt, 'hyperbolic_linear'), strict=True)
                 self.hyp_mlr.load_state_dict(
                     get_keys(ckpt, 'hyp_mlr'), strict=True)
-            else:
+            elif self.geometry == 'euclidean':
                 self.linear.load_state_dict(
                     get_keys(ckpt, 'linear'), strict=True)
                 self.euc_mlr.load_state_dict(
                     get_keys(ckpt, 'euc_mlr'), strict=True)
+            else:
+                raise NotImplementedError(
+                    f'Checkpoint loading for {self.geometry} geometry is not implemented yet.')
             self.transformer_encoder.load_state_dict(
                 get_keys(ckpt, 'transformer_encoder'), strict=True)
             self.transformer_decoder.load_state_dict(
@@ -276,24 +328,15 @@ class hae_clip(nn.Module):
             feature = self.transformer_encoder(ocodes)
             feature = self.linear_encoder(feature)
             feature_reshape = torch.flatten(feature, start_dim=1)
-            if self.opts.hyperbolic:
-                feature_dist = self.hyperbolic_linear(feature_reshape)
-            else:
-                feature_dist = self.linear(feature_reshape)
 
         else:
             feature_dist = x
             # codes = self.encoder(y)
 
-        if self.opts.hyperbolic:
-            logits = F.log_softmax(self.hyp_mlr(
-                feature_dist, self.hyp_mlr.c), dim=-1)
-            feature_euc = gmath.logmap0(feature_dist, k=torch.tensor(-float(self.hyp_mlr.c)))
+        if input_feature:
+            logits, feature_dist, feature_euc = self.geometry_head.from_geometry(feature_dist)
         else:
-            # feature_euc = feature_dist
-            logits = F.log_softmax(
-                self.euc_mlr(feature_dist), dim=-1)
-            feature_euc = feature_dist
+            logits, feature_dist, feature_euc = self.geometry_head(feature_reshape)
 
         feature_euc = feature_euc.unsqueeze(1)
         feature_euc = self.linear_decoder(feature_euc)
