@@ -31,15 +31,14 @@ class EncodeTransforms(TransformsConfig):
                             A.HorizontalFlip(p=0.5),
                             A.Rotate(limit=20),
                         ]),
+			'transform_gt_test': A.Compose([
+                            A.Resize(height=512, width=512),
+                        ]),
 			'transform_test': A.Compose([
                             A.Resize(height=224, width=224),
-                            A.HorizontalFlip(p=0.5),
-                            A.Rotate(limit=20),
                         ]),
 			'transform_inference': A.Compose([
                             A.Resize(height=224, width=224),
-                            A.HorizontalFlip(p=0.5),
-                            A.Rotate(limit=20),
                         ]),
 			'transform_train': transforms.Compose([
 				transforms.RandomResizedCrop(size=(512, 512), scale=(0.2, 1.)),

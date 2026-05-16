@@ -26,7 +26,7 @@ class ImagesDataset(Dataset):
 			target_transform = transforms_dict['transform_gt_train']
 			source_transform = transforms_dict['transform_source']
 		else:
-			target_transform = transforms_dict['transform_test']
+			target_transform = transforms_dict.get('transform_gt_test', transforms_dict['transform_test'])
 			source_transform = transforms_dict['transform_test']
 		train_transform = transforms_dict['transform_train']
 		self.source_paths = sorted(data_utils.make_dataset(source_root))
