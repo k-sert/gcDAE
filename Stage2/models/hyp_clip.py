@@ -331,6 +331,7 @@ class hae_clip(nn.Module):
 
         else:
             feature_dist = x
+            ocodes = None
             # codes = self.encoder(y)
 
         if input_feature:
