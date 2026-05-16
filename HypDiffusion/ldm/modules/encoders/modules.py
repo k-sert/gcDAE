@@ -463,7 +463,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         elif self.opts.dataset_type == 'caltech256_encode':
             self.num_classes = 257
         else:
-            Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
+            raise Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
         self.transformer_encoder = Transformer(
             1,
             1024,
@@ -495,7 +495,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         self.spherical_curvature = torch.tensor(self.c, dtype=torch.float32)
         self.geometry = getattr(self.opts, 'geometry', None)
         if self.geometry is None:
-            self.geometry = 'hyperbolic' if self.opts.hyperbolic else 'euclidean'
+            self.geometry = 'hyperbolic' if getattr(self.opts, 'hyperbolic', False) else 'euclidean'
         self.opts.hyperbolic = self.geometry == 'hyperbolic'
         print('Stage II geometry:', self.geometry)
         if self.geometry == 'hyperbolic':
