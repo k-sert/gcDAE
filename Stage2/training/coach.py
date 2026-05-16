@@ -288,12 +288,15 @@ class Coach:
             params += list(self.net.module.transformer_decoder.parameters())
             params += list(self.net.module.linear_encoder.parameters())
             params += list(self.net.module.linear_decoder.parameters())
-            if self.opts.hyperbolic:
+            if self.opts.geometry == 'hyperbolic':
                 params += list(self.net.module.hyperbolic_linear.parameters())
                 params += list(self.net.module.hyp_mlr.parameters())
-            else:
+            elif self.opts.geometry == 'euclidean':
                 params += list(self.net.module.linear.parameters())
                 params += list(self.net.module.euc_mlr.parameters())
+            else:
+                raise NotImplementedError(
+                    f'Optimizer setup for {self.opts.geometry} geometry is not implemented yet.')
         else:
             params = list(self.net.module.transformer_encoder.parameters())
             
