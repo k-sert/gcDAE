@@ -327,42 +327,44 @@ class Coach:
         loss_dict = {}
         loss = 0.0
         id_logs = None
-        if self.opts.hyperbolic_lambda > 0:
-            loss_hyperbolic = F.nll_loss(logits, label)
-            loss_dict['loss_hyperbolic'] = float(loss_hyperbolic)
-            loss += loss_hyperbolic * self.opts.hyperbolic_lambda
-        if self.opts.reverse_lambda > 0:
-            loss_reverse = F.mse_loss(ocodes, feature_euc)
-            if float(loss_reverse) <= 0.2 and float(loss_reverse) > 0.1:
+        source_feature = ocodes.squeeze(1) if ocodes is not None and ocodes.ndim == 3 else ocodes
+        reconstructed_feature = feature_euc.squeeze(1) if feature_euc.ndim == 3 else feature_euc
+        if self.opts.geometry_lambda > 0:
+            loss_geometry_cls = F.nll_loss(logits, label)
+            loss_dict['loss_geometry_cls'] = float(loss_geometry_cls)
+            loss += loss_geometry_cls * self.opts.geometry_lambda
+        if self.opts.reverse_lambda > 0 and source_feature is not None:
+            loss_reconstruction = F.mse_loss(source_feature, reconstructed_feature)
+            if float(loss_reconstruction) <= 0.2 and float(loss_reconstruction) > 0.1:
                 reverse_lambda = 3
-            elif float(loss_reverse) <= 0.1 and float(loss_reverse) > 0.05:
+            elif float(loss_reconstruction) <= 0.1 and float(loss_reconstruction) > 0.05:
                 reverse_lambda = 6
-            elif float(loss_reverse) <= 0.05 and float(loss_reverse) > 0.025:
+            elif float(loss_reconstruction) <= 0.05 and float(loss_reconstruction) > 0.025:
                 reverse_lambda = 12
-            elif float(loss_reverse) <= 0.025 and float(loss_reverse) > 0.0125:
+            elif float(loss_reconstruction) <= 0.025 and float(loss_reconstruction) > 0.0125:
                 reverse_lambda = 24
-            elif float(loss_reverse) <= 0.0125 and float(loss_reverse) > 0.00625:
+            elif float(loss_reconstruction) <= 0.0125 and float(loss_reconstruction) > 0.00625:
                 reverse_lambda = 48
-            elif float(loss_reverse) <= 0.00625 and float(loss_reverse) > 0.003125:
+            elif float(loss_reconstruction) <= 0.00625 and float(loss_reconstruction) > 0.003125:
                 reverse_lambda = 96
-            elif float(loss_reverse) <= 0.003125 and float(loss_reverse) > 0.002:
+            elif float(loss_reconstruction) <= 0.003125 and float(loss_reconstruction) > 0.002:
                 reverse_lambda = 200
-            elif float(loss_reverse) <= 0.002 and float(loss_reverse) > 0.001:
+            elif float(loss_reconstruction) <= 0.002 and float(loss_reconstruction) > 0.001:
                 reverse_lambda = 300
-            elif float(loss_reverse) <= 0.001 and float(loss_reverse) > 0.0005:
+            elif float(loss_reconstruction) <= 0.001 and float(loss_reconstruction) > 0.0005:
                 reverse_lambda = 500
-            elif float(loss_reverse) <= 0.0005 and float(loss_reverse) > 0.0001:
+            elif float(loss_reconstruction) <= 0.0005 and float(loss_reconstruction) > 0.0001:
                 reverse_lambda = 1000
-            elif float(loss_reverse) <= 0.0001 and float(loss_reverse) > 0.00005:
+            elif float(loss_reconstruction) <= 0.0001 and float(loss_reconstruction) > 0.00005:
                 reverse_lambda = 2000
-            elif float(loss_reverse) <= 0.00005 and float(loss_reverse) > 0.000025:
+            elif float(loss_reconstruction) <= 0.00005 and float(loss_reconstruction) > 0.000025:
                 reverse_lambda = 4000
             else:
                 reverse_lambda = self.opts.reverse_lambda
-            loss_dict['loss_reverse'] = float(loss_reverse)
-            loss += loss_reverse * reverse_lambda
-        if self.opts.cosine_lambda > 0:
-            loss_cosine = F.cosine_similarity(ocodes.squeeze(1), feature_euc.squeeze(1), dim=1)
+            loss_dict['loss_reconstruction'] = float(loss_reconstruction)
+            loss += loss_reconstruction * reverse_lambda
+        if self.opts.cosine_lambda > 0 and source_feature is not None:
+            loss_cosine = F.cosine_similarity(source_feature, reconstructed_feature, dim=1)
             loss_cosine_mean = torch.mean(1-loss_cosine)
             loss_dict['loss_cosine'] = float(loss_cosine_mean)
             loss += loss_cosine_mean * self.opts.cosine_lambda
