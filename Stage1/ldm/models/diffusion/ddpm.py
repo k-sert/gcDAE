@@ -1275,7 +1275,12 @@ class LatentDiffusion(DDPM):
 
     def configure_optimizers(self):
         lr = self.learning_rate
-        # UNet excluded from optimizer — gradients flow through it but weights are never updated
+        # Freeze UNet weights; gradients still flow through the module to the
+        # trainable conditioning mapper, but no UNet parameter grads are stored.
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # UNet excluded from optimizer; only the conditioning mapper is updated.
         params = []
         if self.cond_stage_trainable:
             print(f"{self.__class__.__name__}: Also optimizing conditioner params!")
