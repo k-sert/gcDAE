@@ -14,7 +14,7 @@ model:
     channels: 4
     cond_stage_trainable: true
     conditioning_key: crossattn
-    monitor: train/loss_simple_epoch
+    monitor: val/loss_simple_epoch
     scale_factor: 0.18215
     use_ema: False
 
@@ -84,6 +84,11 @@ data:
           params:
               dataset_type: cub200_encode
               split: train
+      validation:
+          target: ldm.data.reconstruction.ImagesDataset
+          params:
+              dataset_type: cub200_encode
+              split: val
       test:
           target: ldm.data.reconstruction.ImagesDataset
           params:
@@ -95,12 +100,11 @@ lightning:
     early_stopping:
       target: pytorch_lightning.callbacks.EarlyStopping
       params:
-        monitor: train/loss_simple_epoch
+        monitor: val/loss_simple_epoch
         patience: 30
-        min_delta: 0.001
+        min_delta: 0.0001
         mode: min
         verbose: True
-        check_on_train_epoch_end: True
   trainer:
     max_epochs: 100
     num_nodes: 1
