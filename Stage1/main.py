@@ -606,7 +606,7 @@ if __name__ == "__main__":
 
     ckptdir = os.path.join(logdir, "checkpoints")
     cfgdir = os.path.join(logdir, "configs")
-    seed_everything(opt.seed)
+    seed_everything(opt.seed, workers=True)
 
     # try:
         # init and save configs
