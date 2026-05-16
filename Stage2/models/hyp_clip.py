@@ -246,7 +246,7 @@ class hae_clip(nn.Module):
         elif self.opts.dataset_type == 'caltech256_encode':
             self.num_classes = 257
         else:
-            Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
+            raise Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
         self.transformer_encoder = Transformer(
             1,
             1024,

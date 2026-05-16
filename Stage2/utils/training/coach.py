@@ -202,7 +202,7 @@ class Coach:
 
 	def configure_datasets(self):
 		if self.opts.dataset_type not in data_configs.DATASETS.keys():
-			Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
+			raise Exception(f'{self.opts.dataset_type} is not a valid dataset_type')
 		print(f'Loading dataset for {self.opts.dataset_type}')
 		dataset_args = data_configs.DATASETS[self.opts.dataset_type]
 		transforms_dict = dataset_args['transforms'](self.opts).get_transforms()
