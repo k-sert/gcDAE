@@ -25,5 +25,6 @@ srun python -u main.py \
     --base configs/v1_caltech256.yaml \
     --logdir /scratch-shared/scur0164/checkpoints/Stage1/caltech256 \
     --pretrained_model ${SD_CKPT} \
+    --seed 23 \
     --scale_lr False \
     --max_epochs 1

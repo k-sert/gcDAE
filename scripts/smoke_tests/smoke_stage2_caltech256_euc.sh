@@ -25,6 +25,7 @@ python scripts/train.py \
     --psp_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=${EXP_DIR} \
+    --seed 23 \
     --geometry euclidean \
     --feature_size=512 \
     --transformer_layers=5 \
