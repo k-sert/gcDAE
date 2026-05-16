@@ -408,6 +408,32 @@ class FrozenCLIPTextEmbedder(AbstractEncoder):
             self.device = device
         return self(text, inv)
     
+
+class SphericalPrototypeClassifier(nn.Module):
+    def __init__(self, ball_dim, n_classes, k):
+        super(SphericalPrototypeClassifier, self).__init__()
+        self.prototype_tangents = nn.Parameter(torch.Tensor(n_classes, ball_dim))
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        self.k = k
+        self.n_classes = n_classes
+        self.ball_dim = ball_dim
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.prototype_tangents, mean=0.0, std=1e-2)
+
+    def get_prototypes(self, like):
+        k = torch.as_tensor(self.k).type_as(like)
+        prototypes = gmath.expmap0(self.prototype_tangents.type_as(like), k=k)
+        return gmath.project(prototypes, k=k)
+
+    def forward(self, x):
+        k = torch.as_tensor(self.k).type_as(x)
+        prototypes = self.get_prototypes(x)
+        distances = gmath.dist(
+            x.unsqueeze(1), prototypes.unsqueeze(0), k=k, dim=-1)
+        return -distances * self.logit_scale.exp()
+    
     
 class HyperbolicCLIPImageEmbedder(AbstractEncoder):
     def __init__(self, opts):
@@ -466,8 +492,13 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         # self.mlp = MLP(512)
         self.c = getattr(self.opts, 'c', 1.0)
         self.curvature = torch.tensor(-self.c, dtype=torch.float32)
-        print('Use hyperbolic:', self.opts.hyperbolic)
-        if self.opts.hyperbolic:
+        self.spherical_curvature = torch.tensor(self.c, dtype=torch.float32)
+        self.geometry = getattr(self.opts, 'geometry', None)
+        if self.geometry is None:
+            self.geometry = 'hyperbolic' if self.opts.hyperbolic else 'euclidean'
+        self.opts.hyperbolic = self.geometry == 'hyperbolic'
+        print('Stage II geometry:', self.geometry)
+        if self.geometry == 'hyperbolic':
             self.hyperbolic_linear = MobiusLinear(self.feature_shape,
                                                   self.feature_shape,
                                                   # This computes an exmap0 after the operation, where the linear
@@ -479,11 +510,20 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                                                   )
             self.hyp_mlr = HyperbolicMLR(
                 ball_dim=self.feature_shape, n_classes=self.num_classes, c=self.curvature.abs())
-        else:
+        elif self.geometry == 'euclidean':
             self.linear = LogisticRegression(
                 self.feature_shape, self.feature_shape)
             self.euc_mlr = LogisticRegression(
                 n_inputs=self.feature_shape, n_outputs=self.num_classes)
+        elif self.geometry == 'spherical':
+            self.spherical_linear = LogisticRegression(
+                self.feature_shape, self.feature_shape)
+            self.spherical_classifier = SphericalPrototypeClassifier(
+                ball_dim=self.feature_shape,
+                n_classes=self.num_classes,
+                k=self.spherical_curvature)
+        else:
+            raise ValueError(f'{self.geometry} is not a valid Stage II geometry')
         # Load weights if needed
         self.load_weights()
 
@@ -507,16 +547,24 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 name = k.replace('module.', '')
                 new_state_dict[name] = v
             ckpt['state_dict'] = new_state_dict
-            if self.opts.hyperbolic:
+            if self.geometry == 'hyperbolic':
                 self.hyperbolic_linear.load_state_dict(
                     get_keys(ckpt, 'hyperbolic_linear'), strict=True)
                 self.hyp_mlr.load_state_dict(
                     get_keys(ckpt, 'hyp_mlr'), strict=True)
-            else:
+            elif self.geometry == 'euclidean':
                 self.linear.load_state_dict(
                     get_keys(ckpt, 'linear'), strict=True)
                 self.euc_mlr.load_state_dict(
                     get_keys(ckpt, 'euc_mlr'), strict=True)
+            elif self.geometry == 'spherical':
+                self.spherical_linear.load_state_dict(
+                    get_keys(ckpt, 'spherical_linear'), strict=True)
+                self.spherical_classifier.load_state_dict(
+                    get_keys(ckpt, 'spherical_classifier'), strict=True)
+            else:
+                raise NotImplementedError(
+                    f'Checkpoint loading for {self.geometry} geometry is not implemented yet.')
             self.transformer_encoder.load_state_dict(
                 get_keys(ckpt, 'transformer_encoder'), strict=True)
             self.transformer_decoder.load_state_dict(
@@ -563,10 +611,18 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 feature = self.transformer_encoder(ocodes)
                 feature = self.linear_encoder(feature)
             feature_reshape = torch.flatten(feature, start_dim=1)
-            if self.opts.hyperbolic:
+            if self.geometry == 'hyperbolic':
                 feature_dist = self.hyperbolic_linear(feature_reshape)
-            else:
+            elif self.geometry == 'euclidean':
                 feature_dist = self.linear(feature_reshape)
+            elif self.geometry == 'spherical':
+                tangent_feature = self.spherical_linear(feature_reshape)
+                k = torch.as_tensor(self.spherical_curvature).type_as(tangent_feature)
+                feature_dist = gmath.expmap0(tangent_feature, k=k)
+                feature_dist = gmath.project(feature_dist, k=k)
+            else:
+                raise NotImplementedError(
+                    f'Forward pass for {self.geometry} geometry is not implemented yet.')
 
         else:
             ocodes = None
@@ -574,15 +630,21 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
             feature_dist = x
             # codes = self.encoder(y)
 
-        if self.opts.hyperbolic:
+        if self.geometry == 'hyperbolic':
             logits = F.log_softmax(self.hyp_mlr(
                 feature_dist, self.hyp_mlr.c), dim=-1)
-            feature_euc = gmath.logmap0(feature_dist, k=torch.tensor(-1.))
-        else:
-            # feature_euc = feature_dist
+            feature_euc = gmath.logmap0(feature_dist, k=self.curvature.type_as(feature_dist))
+        elif self.geometry == 'euclidean':
             logits = F.log_softmax(
                 self.euc_mlr(feature_dist), dim=-1)
             feature_euc = feature_dist
+        elif self.geometry == 'spherical':
+            k = torch.as_tensor(self.spherical_curvature).type_as(feature_dist)
+            logits = F.log_softmax(self.spherical_classifier(feature_dist), dim=-1)
+            feature_euc = gmath.logmap0(feature_dist, k=k)
+        else:
+            raise NotImplementedError(
+                f'Forward pass for {self.geometry} geometry is not implemented yet.')
 
         feature_euc = feature_euc.unsqueeze(1)
         feature_euc = self.linear_decoder(feature_euc)
