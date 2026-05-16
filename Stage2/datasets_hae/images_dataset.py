@@ -13,16 +13,21 @@ import numpy as np
 
 class ImagesDataset(Dataset):
 
-	def __init__(self, dataset_type):
+	def __init__(self, dataset_type, split='train'):
 		if dataset_type not in data_configs.DATASETS.keys():
-			Exception(f'{dataset_type} is not a valid dataset_type')
-		print(f'Loading dataset for {dataset_type}')
+			raise Exception(f'{dataset_type} is not a valid dataset_type')
+		if split not in ['train', 'val', 'test']:
+			raise Exception(f'{split} is not a valid split')
+		print(f'Loading {split} dataset for {dataset_type}')
 		dataset_args = data_configs.DATASETS[dataset_type]
 		transforms_dict = dataset_args['transforms']().get_transforms()
-		source_root = dataset_args['train_source_root']
-		target_root = dataset_args['train_target_root']
-		target_transform = transforms_dict['transform_gt_train']
-		source_transform = transforms_dict['transform_source']
+		source_root, target_root = self._get_split_roots(dataset_args, split)
+		if split == 'train':
+			target_transform = transforms_dict['transform_gt_train']
+			source_transform = transforms_dict['transform_source']
+		else:
+			target_transform = transforms_dict['transform_test']
+			source_transform = transforms_dict['transform_test']
 		train_transform = transforms_dict['transform_train']
 		self.source_paths = sorted(data_utils.make_dataset(source_root))
 		self.target_paths = sorted(data_utils.make_dataset(target_root))
@@ -30,6 +35,16 @@ class ImagesDataset(Dataset):
 		self.source_transform = source_transform
 		self.target_transform = target_transform
 		self.train_transform = train_transform
+
+	def _get_split_roots(self, dataset_args, split):
+		if split == 'train':
+			return dataset_args['train_source_root'], dataset_args['train_target_root']
+		source_key = f'{split}_source_root'
+		target_key = f'{split}_target_root'
+		if source_key not in dataset_args and split == 'val':
+			source_key = 'test_source_root'
+			target_key = 'test_target_root'
+		return dataset_args[source_key], dataset_args[target_key]
 
 	def __len__(self):
 		return len(self.source_paths)
