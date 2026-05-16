@@ -17,8 +17,11 @@ class TrainOptions:
             '--encoder_type', default='CLIPImageEmbedder', type=str, help='Which encoder to use')
         self.parser.add_argument(
             '--encoder_version', default='/data2/mhf/DXL/Lingxiao/Cache/huggingface/hub/models--openai--clip-vit-large-patch14', type=str, help='Which encoder version to use')
+        self.parser.add_argument('--geometry', default=None,
+                                 choices=['euclidean', 'hyperbolic', 'spherical'],
+                                 help='Geometry used by the Stage II feature bottleneck')
         self.parser.add_argument('--hyperbolic', action='store_true',
-                                 help='Whether the model performs in hyperbolic space')
+                                 help='Deprecated: use --geometry hyperbolic')
         self.parser.add_argument('--input_nc', default=3, type=int,
                                  help='Number of input image channels to the psp encoder')
         self.parser.add_argument('--label_nc', default=0, type=int,
@@ -188,4 +191,8 @@ class TrainOptions:
 
     def parse(self):
         opts = self.parser.parse_args()
+        if opts.geometry is None:
+            opts.geometry = 'hyperbolic' if opts.hyperbolic else 'euclidean'
+        else:
+            opts.hyperbolic = opts.geometry == 'hyperbolic'
         return opts

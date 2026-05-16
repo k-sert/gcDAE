@@ -18,7 +18,7 @@ CUDA_VISIBLE_DEVICES=2 python scripts/train.py \
 --max_steps=30000 \
 --encoder_type=CLIPImageEmbedder \
 --optim_name=adam \
---hyperbolic=True \
+--geometry hyperbolic \
 --hyperbolic_lambda=0.3 \
 --reverse_lambda=5 \
 --ngpus-per-node 1 \
