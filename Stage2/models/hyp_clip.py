@@ -167,10 +167,50 @@ class HyperbolicGeometryHead:
         return logits, feature_dist, feature_euc
 
 
+class SphericalPrototypeClassifier(nn.Module):
+    def __init__(self, ball_dim, n_classes, k):
+        super(SphericalPrototypeClassifier, self).__init__()
+        self.prototype_tangents = nn.Parameter(torch.Tensor(n_classes, ball_dim))
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        self.k = k
+        self.n_classes = n_classes
+        self.ball_dim = ball_dim
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.prototype_tangents, mean=0.0, std=1e-2)
+
+    def get_prototypes(self, like):
+        k = torch.as_tensor(self.k).type_as(like)
+        prototypes = gmath.expmap0(self.prototype_tangents.type_as(like), k=k)
+        return gmath.project(prototypes, k=k)
+
+    def forward(self, x):
+        k = torch.as_tensor(self.k).type_as(x)
+        prototypes = self.get_prototypes(x)
+        distances = gmath.dist(
+            x.unsqueeze(1), prototypes.unsqueeze(0), k=k, dim=-1)
+        return -distances * self.logit_scale.exp()
+
+
 class SphericalGeometryHead:
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError(
-            'Spherical Stage II geometry is not implemented yet.')
+    def __init__(self, spherical_linear, classifier, k):
+        self.spherical_linear = spherical_linear
+        self.classifier = classifier
+        self.k = k
+
+    def __call__(self, feature):
+        tangent_feature = self.spherical_linear(feature)
+        k = torch.as_tensor(self.k).type_as(tangent_feature)
+        feature_dist = gmath.expmap0(tangent_feature, k=k)
+        feature_dist = gmath.project(feature_dist, k=k)
+        return self.from_geometry(feature_dist)
+
+    def from_geometry(self, feature_dist):
+        k = torch.as_tensor(self.k).type_as(feature_dist)
+        logits = F.log_softmax(self.classifier(feature_dist), dim=-1)
+        feature_euc = gmath.logmap0(feature_dist, k=k)
+        return logits, feature_dist, feature_euc
 
 
 class hae_clip(nn.Module):
@@ -182,6 +222,7 @@ class hae_clip(nn.Module):
         self.encoder = self.set_encoder(self.opts.encoder_version)
         self.feature_shape = self.opts.feature_size
         self.curvature = torch.tensor(-self.opts.c, dtype=torch.float32)
+        self.spherical_curvature = torch.tensor(self.opts.c, dtype=torch.float32)
         if self.opts.dataset_type == 'flowers_encode':
             self.num_classes = 102  # animal_faces 151, flowers 102
         elif self.opts.dataset_type == 'flowers_encode_eva':
@@ -254,7 +295,16 @@ class hae_clip(nn.Module):
                 n_inputs=self.feature_shape, n_outputs=self.num_classes)
             self.geometry_head = EuclideanGeometryHead(self.linear, self.euc_mlr)
         elif self.geometry == 'spherical':
-            self.geometry_head = SphericalGeometryHead()
+            self.spherical_linear = LogisticRegression(
+                self.feature_shape, self.feature_shape)
+            self.spherical_classifier = SphericalPrototypeClassifier(
+                ball_dim=self.feature_shape,
+                n_classes=self.num_classes,
+                k=self.spherical_curvature)
+            self.geometry_head = SphericalGeometryHead(
+                self.spherical_linear,
+                self.spherical_classifier,
+                self.spherical_curvature)
         else:
             raise ValueError(f'{self.geometry} is not a valid Stage II geometry')
         # Load weights if needed
@@ -290,6 +340,11 @@ class hae_clip(nn.Module):
                     get_keys(ckpt, 'linear'), strict=True)
                 self.euc_mlr.load_state_dict(
                     get_keys(ckpt, 'euc_mlr'), strict=True)
+            elif self.geometry == 'spherical':
+                self.spherical_linear.load_state_dict(
+                    get_keys(ckpt, 'spherical_linear'), strict=True)
+                self.spherical_classifier.load_state_dict(
+                    get_keys(ckpt, 'spherical_classifier'), strict=True)
             else:
                 raise NotImplementedError(
                     f'Checkpoint loading for {self.geometry} geometry is not implemented yet.')

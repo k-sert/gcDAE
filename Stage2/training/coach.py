@@ -294,6 +294,9 @@ class Coach:
             elif self.opts.geometry == 'euclidean':
                 params += list(self.net.module.linear.parameters())
                 params += list(self.net.module.euc_mlr.parameters())
+            elif self.opts.geometry == 'spherical':
+                params += list(self.net.module.spherical_linear.parameters())
+                params += list(self.net.module.spherical_classifier.parameters())
             else:
                 raise NotImplementedError(
                     f'Optimizer setup for {self.opts.geometry} geometry is not implemented yet.')
