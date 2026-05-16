@@ -31,7 +31,7 @@ class TrainOptions:
         self.parser.add_argument(
             '--output_size', default=1024, type=int, help='Output size of generator')
         self.parser.add_argument(
-            '--transformer_layers', default=20, type=int, help='Number of transformer layers in the model')
+            '--transformer_layers', default=30, type=int, help='Number of transformer layers in the decoder')
 
         self.parser.add_argument(
             '--batch_size', default=4, type=int, help='Batch size for training')
