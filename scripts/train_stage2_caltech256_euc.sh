@@ -26,6 +26,7 @@ python scripts/train.py \
     --psp_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=/scratch-shared/scur0164/checkpoints/Stage2/caltech256_euc \
+    --geometry euclidean \
     --feature_size=512 \
     --transformer_layers=5 \
     --train_all \
@@ -41,7 +42,7 @@ python scripts/train.py \
     --save_interval=5000 \
     --board_interval=50 \
     --val_interval=999999 \
-    --hyperbolic_lambda=1.0 \
+    --geometry_lambda=1.0 \
     --reverse_lambda=0.1 \
     --cosine_lambda=0.1 \
     --ngpus-per-node 1 \
