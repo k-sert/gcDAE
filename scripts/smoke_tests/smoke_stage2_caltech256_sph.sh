@@ -31,11 +31,11 @@ python scripts/train.py \
     --feature_size=512 \
     --transformer_layers=30 \
     --train_all \
-    --learning_rate=0.0001 \
+    --learning_rate=0.001 \
     --step_size=2 \
     --gamma=0.5 \
     --optim_name=adam \
-    --batch_size=4 \
+    --batch_size=256 \
     --test_batch_size=4 \
     --workers=2 \
     --test_workers=2 \
