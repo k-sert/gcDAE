@@ -296,7 +296,7 @@ class Coach:
         return train_dataset, val_dataset
 
     def train_loop(self):
-        while self.global_step < self.opts.max_steps:
+        while self.global_step <= self.opts.max_steps:
             correct = 0
             data_size = 0
             for batch_idx, batch in enumerate(self.train_dataloader):
