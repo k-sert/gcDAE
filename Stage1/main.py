@@ -430,6 +430,134 @@ class CUDACallback(Callback):
             pass
 
 
+class CodeCarbonCallback(Callback):
+    def __init__(self, project_name="hypdae_stage1", output_dir=None,
+                 measure_power_secs=30, log_every_n_secs=300,
+                 save_to_file=True, tracker_kwargs=None):
+        self.project_name = project_name
+        self.output_dir = output_dir
+        self.measure_power_secs = measure_power_secs
+        self.log_every_n_secs = log_every_n_secs
+        self.save_to_file = save_to_file
+        self.tracker_kwargs = tracker_kwargs or {}
+        self.tracker = None
+        self.start_time = None
+        self.last_log_time = None
+        self.resolved_output_dir = None
+        self.output_file = None
+
+    def _resolve_output_dir(self, trainer):
+        if self.output_dir:
+            return self.output_dir
+
+        logger = getattr(trainer, "logger", None)
+        log_dir = getattr(logger, "log_dir", None)
+        if log_dir:
+            return os.path.join(log_dir, "codecarbon")
+
+        save_dir = getattr(logger, "save_dir", None)
+        if save_dir:
+            return os.path.join(save_dir, "codecarbon")
+
+        return os.path.join(os.getcwd(), "codecarbon")
+
+    def on_fit_start(self, trainer, pl_module):
+        if getattr(trainer, "global_rank", 0) != 0:
+            return
+
+        try:
+            from codecarbon import EmissionsTracker
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "CodeCarbon tracking is enabled, but the 'codecarbon' package "
+                "is not installed in this environment. Install it or remove the "
+                "codecarbon callback from the config."
+            ) from exc
+
+        output_dir = self._resolve_output_dir(trainer)
+        os.makedirs(output_dir, exist_ok=True)
+
+        tracker_args = {
+            "project_name": self.project_name,
+            "output_dir": output_dir,
+            "measure_power_secs": self.measure_power_secs,
+            "save_to_file": self.save_to_file,
+            "log_level": "warning",
+        }
+        tracker_args.update(self.tracker_kwargs)
+
+        self.resolved_output_dir = output_dir
+        self.output_file = tracker_args.get("output_file", "emissions.csv")
+        self.start_time = time.time()
+        self.last_log_time = self.start_time
+        self.tracker = EmissionsTracker(**tracker_args)
+        self.tracker.start()
+        rank_zero_info(
+            "CodeCarbon tracking started. "
+            f"Sampling every {self.measure_power_secs}s. "
+            f"Results: {os.path.join(output_dir, self.output_file)}"
+        )
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        if getattr(trainer, "global_rank", 0) != 0 or self.tracker is None:
+            return
+        if not self.log_every_n_secs:
+            return
+
+        now = time.time()
+        if now - self.last_log_time < self.log_every_n_secs:
+            return
+
+        elapsed_mins = (now - self.start_time) / 60.0
+        self.last_log_time = now
+        rank_zero_info(
+            "CodeCarbon tracking active "
+            f"({elapsed_mins:.1f} min elapsed). "
+            f"Final results will be written to {os.path.join(self.resolved_output_dir, self.output_file)}"
+        )
+
+    def _stop_tracker(self):
+        if self.tracker is None:
+            return
+        emissions = self.tracker.stop()
+        final_data = getattr(self.tracker, "final_emissions_data", None)
+        self.tracker = None
+        if emissions is not None:
+            rank_zero_info(f"CodeCarbon emissions: {emissions:.6f} kg CO2eq")
+        if final_data is not None:
+            duration = getattr(final_data, "duration", None)
+            energy = getattr(final_data, "energy_consumed", None)
+            gpu_energy = getattr(final_data, "gpu_energy", None)
+            cpu_energy = getattr(final_data, "cpu_energy", None)
+            summary = []
+            if duration is not None:
+                summary.append(f"duration={duration / 60.0:.2f} min")
+            if energy is not None:
+                summary.append(f"energy={energy:.6f} kWh")
+            if gpu_energy is not None:
+                summary.append(f"gpu_energy={gpu_energy:.6f} kWh")
+            if cpu_energy is not None:
+                summary.append(f"cpu_energy={cpu_energy:.6f} kWh")
+            if summary:
+                rank_zero_info("CodeCarbon summary: " + ", ".join(summary))
+        if self.resolved_output_dir and self.output_file:
+            rank_zero_info(
+                f"CodeCarbon results saved to {os.path.join(self.resolved_output_dir, self.output_file)}"
+            )
+
+    def on_fit_end(self, trainer, pl_module):
+        if getattr(trainer, "global_rank", 0) == 0:
+            self._stop_tracker()
+
+    def on_exception(self, trainer, pl_module, exception):
+        if getattr(trainer, "global_rank", 0) == 0:
+            self._stop_tracker()
+
+    def on_keyboard_interrupt(self, trainer, pl_module):
+        if getattr(trainer, "global_rank", 0) == 0:
+            self._stop_tracker()
+
+
 if __name__ == "__main__":
 
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
