@@ -44,6 +44,7 @@ class Coach:
         self.codecarbon_last_log_time = None
         self.codecarbon_output_dir = None
         self.codecarbon_output_file = None
+        self.early_stop_counter = 0
         # torch.cuda.set_device(1)
         # self.device = 'cuda:1'  # TODO: Allow multiple GPU? currently using CUDA_VISIBLE_DEVICES
         # self.opts.device = self.device
@@ -328,14 +329,81 @@ class Coach:
                     self.print_metrics(loss_dict, prefix='train')
                     self.log_metrics(loss_dict, prefix='train')
 
+                stop_training = False
+                val_loss_dict = None
+                should_validate = (
+                    self.opts.val_interval is not None
+                    and self.opts.val_interval > 0
+                    and self.global_step % self.opts.val_interval == 0
+                )
+                if should_validate or self.global_step == self.opts.max_steps:
+                    val_loss_dict = self.validate()
+                    stop_training = self.update_early_stopping(val_loss_dict)
+
                 if self.global_step % self.opts.save_interval == 0 or self.global_step == self.opts.max_steps:
-                    self.checkpoint_me(loss_dict, is_best=False)
+                    self.checkpoint_me(val_loss_dict if val_loss_dict is not None else loss_dict, is_best=False)
+
+                if stop_training:
+                    print('Early stopping triggered. Finished training!')
+                    return
 
                 if self.global_step == self.opts.max_steps:
                     print('OMG, finished training!')
                     break
 
                 self.global_step += 1
+
+    def validate(self):
+        self.net.eval()
+        agg_loss_dict = []
+        correct = 0
+        data_size = 0
+
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(self.val_dataloader):
+                x, y, label = batch
+                x, y, label = x.to(self.opts.device).float(), y.to(
+                    self.opts.device).float(), label.to(self.opts.device)
+                bsz = label.shape[0]
+                logits, feature_dist, ocodes, feature_euc = self.net.forward(
+                    x, batch_size=bsz, return_latents=True)
+                loss, cur_loss_dict, id_logs = self.calc_loss(logits, label, ocodes, feature_euc)
+                pred = logits.argmax(dim=1, keepdim=True)
+                correct += pred.eq(label.view_as(pred)).sum().item()
+                data_size += bsz
+                agg_loss_dict.append(cur_loss_dict)
+
+        loss_dict = train_utils.aggregate_loss_dict(agg_loss_dict)
+        if data_size > 0:
+            loss_dict['accuracy'] = 100.0 * correct / data_size
+            print("Validation set: Accuracy: {}/{} ({:.0f}%)\n".format(
+                correct, data_size, 100.0 * correct / data_size))
+        self.print_metrics(loss_dict, prefix='val')
+        self.log_metrics(loss_dict, prefix='val')
+        self.net.train()
+        return loss_dict
+
+    def update_early_stopping(self, val_loss_dict):
+        if val_loss_dict is None or 'loss' not in val_loss_dict:
+            return False
+
+        val_loss = val_loss_dict['loss']
+        improved = (
+            self.best_val_loss is None
+            or val_loss < self.best_val_loss - self.opts.early_stop_min_delta
+        )
+        if improved:
+            self.best_val_loss = val_loss
+            self.early_stop_counter = 0
+            self.checkpoint_me(val_loss_dict, is_best=True)
+            return False
+
+        self.early_stop_counter += 1
+        print(
+            f"Validation loss did not improve. "
+            f"Patience: {self.early_stop_counter}/{self.opts.early_stop_patience}"
+        )
+        return self.opts.early_stop_patience > 0 and self.early_stop_counter >= self.opts.early_stop_patience
 
     def is_main_process(self):
         if not getattr(self.opts, 'distributed', False):
@@ -528,8 +596,12 @@ class Coach:
     def __get_save_dict(self):
         save_dict = {
             'state_dict': self.net.module.state_dict(),
-            'opts': vars(self.opts)
+            'opts': vars(self.opts),
+            'global_step': self.global_step,
+            'best_val_loss': self.best_val_loss
         }
+        if self.opts.save_training_data:
+            save_dict['optimizer'] = self.optimizer.state_dict()
         return save_dict
 
 
