@@ -107,6 +107,10 @@ class TrainOptions:
             '--val_interval', default=1000, type=int, help='Validation interval')
         self.parser.add_argument(
             '--save_interval', default=None, type=int, help='Model checkpoint interval')
+        self.parser.add_argument('--early_stop_patience', default=20, type=int,
+                                 help='Number of validation checks without improvement before stopping. Set <= 0 to disable.')
+        self.parser.add_argument('--early_stop_min_delta', default=0.0001, type=float,
+                                 help='Minimum validation loss improvement required to reset early stopping.')
         
         # Discriminator flags
         self.parser.add_argument(
