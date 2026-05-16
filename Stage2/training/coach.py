@@ -184,25 +184,28 @@ class Coach:
         self.optimizer, self.scheduler = self.configure_optimizers()
 
         # Initialize dataset
-        self.train_dataset, self.test_dataset = self.configure_datasets()
+        self.train_dataset, self.val_dataset = self.configure_datasets()
         if self.opts.distributed:
             train_sampler = torch.utils.data.distributed.DistributedSampler(
                 self.train_dataset)
+            val_sampler = torch.utils.data.distributed.DistributedSampler(
+                self.val_dataset, shuffle=False)
         else:
             train_sampler = None
+            val_sampler = None
         self.train_dataloader = DataLoader(self.train_dataset,
                                            batch_size=self.opts.batch_size,
                                            shuffle=(train_sampler is None),
                                            num_workers=int(self.opts.workers),
                                            sampler=train_sampler,
                                            drop_last=True)
-        self.test_dataloader = DataLoader(self.test_dataset,
-                                          batch_size=self.opts.test_batch_size,
-                                          shuffle=(train_sampler is None),
-                                          num_workers=int(
-                                              self.opts.test_workers),
-                                          sampler=train_sampler,
-                                          drop_last=True)
+        self.val_dataloader = DataLoader(self.val_dataset,
+                                         batch_size=self.opts.test_batch_size,
+                                         shuffle=False,
+                                         num_workers=int(
+                                             self.opts.test_workers),
+                                         sampler=val_sampler,
+                                         drop_last=True)
         
 
         # Initialize logger
@@ -313,15 +316,15 @@ class Coach:
 
     def configure_datasets(self):
         # print(transforms_dict)
-        train_dataset = ImagesDataset(self.opts.dataset_type)
-        test_dataset = ImagesDataset(self.opts.dataset_type)
+        train_dataset = ImagesDataset(self.opts.dataset_type, split='train')
+        val_dataset = ImagesDataset(self.opts.dataset_type, split='val')
         if self.opts.use_wandb:
             self.wb_logger.log_dataset_wandb(
                 train_dataset, dataset_name="Train")
-            self.wb_logger.log_dataset_wandb(test_dataset, dataset_name="Test")
+            self.wb_logger.log_dataset_wandb(val_dataset, dataset_name="Validation")
         print(f"Number of training samples: {len(train_dataset)}")
-        print(f"Number of test samples: {len(test_dataset)}")
-        return train_dataset, test_dataset
+        print(f"Number of validation samples: {len(val_dataset)}")
+        return train_dataset, val_dataset
 
     def calc_loss(self, logits, label, ocodes, feature_euc):
         loss_dict = {}
