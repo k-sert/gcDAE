@@ -19,6 +19,7 @@ from torch import nn, autograd
 import torch
 import os
 import random
+import time
 import matplotlib
 import matplotlib.pyplot as plt
 import warnings
@@ -38,6 +39,11 @@ class Coach:
     def __init__(self, opts, prev_train_checkpoint=None):
         self.opts = opts
         self.global_step = 1
+        self.codecarbon_tracker = None
+        self.codecarbon_start_time = None
+        self.codecarbon_last_log_time = None
+        self.codecarbon_output_dir = None
+        self.codecarbon_output_file = None
         # torch.cuda.set_device(1)
         # self.device = 'cuda:1'  # TODO: Allow multiple GPU? currently using CUDA_VISIBLE_DEVICES
         # self.opts.device = self.device
@@ -225,49 +231,11 @@ class Coach:
             prev_train_checkpoint = None
 
         self.net.train()
-            
-        while self.global_step < self.opts.max_steps:
-            correct = 0
-            data_size = 0
-            for batch_idx, batch in enumerate(self.train_dataloader):
-                loss_dict = {}
-                self.optimizer.zero_grad()
-                x, y, label = batch
-                x, y, label = x.to(self.opts.device).float(), y.to(
-                    self.opts.device).float(), label.to(self.opts.device)
-                # images = torch.cat([x, z], dim=0)
-                images = x
-                bsz = label.shape[0]
-                data_size += bsz
-                logits, feature_dist, ocodes, feature_euc = self.net.forward(
-                    images, batch_size=bsz, return_latents=True)
-                loss, encoder_loss_dict, id_logs = self.calc_loss(logits, label, ocodes, feature_euc)
-                pred = logits.argmax(dim=1, keepdim=True)
-                correct += pred.eq(label.view_as(pred)).sum().item()
-                loss_dict = {**loss_dict, **encoder_loss_dict}
-                loss.backward()
-                self.optimizer.step()
-                self.scheduler.step()
-
-                if self.global_step % self.opts.board_interval == 0:
-                    if self.global_step != 0 and data_size != 0:
-                        loss_dict['accuracy'] = 100.0 * correct / data_size
-                        print("Test set: Accuracy: {}/{} ({:.0f}%)\n".format(correct,
-                              data_size, 100.0*correct/data_size))
-                        correct = 0
-                        data_size = 0
-                    self.print_metrics(loss_dict, prefix='train')
-                    self.log_metrics(loss_dict, prefix='train')
-
-
-                if self.global_step % self.opts.save_interval == 0 or self.global_step == self.opts.max_steps:
-                    self.checkpoint_me(loss_dict, is_best=False)
-
-                if self.global_step == self.opts.max_steps:
-                    print('OMG, finished training!')
-                    break
-
-                self.global_step += 1
+        self.start_codecarbon_tracking()
+        try:
+            self.train_loop()
+        finally:
+            self.stop_codecarbon_tracking()
 
 
     def checkpoint_me(self, loss_dict, is_best):
@@ -325,6 +293,142 @@ class Coach:
         print(f"Number of training samples: {len(train_dataset)}")
         print(f"Number of validation samples: {len(val_dataset)}")
         return train_dataset, val_dataset
+
+    def train_loop(self):
+        while self.global_step < self.opts.max_steps:
+            correct = 0
+            data_size = 0
+            for batch_idx, batch in enumerate(self.train_dataloader):
+                loss_dict = {}
+                self.optimizer.zero_grad()
+                x, y, label = batch
+                x, y, label = x.to(self.opts.device).float(), y.to(
+                    self.opts.device).float(), label.to(self.opts.device)
+                images = x
+                bsz = label.shape[0]
+                data_size += bsz
+                logits, feature_dist, ocodes, feature_euc = self.net.forward(
+                    images, batch_size=bsz, return_latents=True)
+                loss, encoder_loss_dict, id_logs = self.calc_loss(logits, label, ocodes, feature_euc)
+                pred = logits.argmax(dim=1, keepdim=True)
+                correct += pred.eq(label.view_as(pred)).sum().item()
+                loss_dict = {**loss_dict, **encoder_loss_dict}
+                loss.backward()
+                self.optimizer.step()
+                self.scheduler.step()
+                self.log_codecarbon_status()
+
+                if self.global_step % self.opts.board_interval == 0:
+                    if self.global_step != 0 and data_size != 0:
+                        loss_dict['accuracy'] = 100.0 * correct / data_size
+                        print("Train set: Accuracy: {}/{} ({:.0f}%)\n".format(correct,
+                              data_size, 100.0*correct/data_size))
+                        correct = 0
+                        data_size = 0
+                    self.print_metrics(loss_dict, prefix='train')
+                    self.log_metrics(loss_dict, prefix='train')
+
+                if self.global_step % self.opts.save_interval == 0 or self.global_step == self.opts.max_steps:
+                    self.checkpoint_me(loss_dict, is_best=False)
+
+                if self.global_step == self.opts.max_steps:
+                    print('OMG, finished training!')
+                    break
+
+                self.global_step += 1
+
+    def is_main_process(self):
+        if not getattr(self.opts, 'distributed', False):
+            return True
+        return getattr(self.opts, 'rank', 0) == 0
+
+    def start_codecarbon_tracking(self):
+        if not getattr(self.opts, 'use_codecarbon', False):
+            return
+        if not self.is_main_process():
+            return
+
+        try:
+            from codecarbon import EmissionsTracker
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "CodeCarbon tracking is enabled, but the 'codecarbon' package "
+                "is not installed in this environment. Install it or disable "
+                "--use_codecarbon."
+            ) from exc
+
+        output_dir = self.opts.codecarbon_output_dir
+        if output_dir is None:
+            output_dir = os.path.join(self.logger.log_dir, 'codecarbon')
+        os.makedirs(output_dir, exist_ok=True)
+
+        tracker_args = {
+            'project_name': self.opts.codecarbon_project_name,
+            'output_dir': output_dir,
+            'measure_power_secs': self.opts.codecarbon_measure_power_secs,
+            'save_to_file': True,
+            'log_level': 'warning',
+        }
+
+        self.codecarbon_output_dir = output_dir
+        self.codecarbon_output_file = tracker_args.get('output_file', 'emissions.csv')
+        self.codecarbon_start_time = time.time()
+        self.codecarbon_last_log_time = self.codecarbon_start_time
+        self.codecarbon_tracker = EmissionsTracker(**tracker_args)
+        self.codecarbon_tracker.start()
+        print(
+            "CodeCarbon tracking started. "
+            f"Sampling every {self.opts.codecarbon_measure_power_secs}s. "
+            f"Results: {os.path.join(output_dir, self.codecarbon_output_file)}"
+        )
+
+    def log_codecarbon_status(self):
+        if self.codecarbon_tracker is None:
+            return
+        if not self.opts.codecarbon_log_every_n_secs:
+            return
+
+        now = time.time()
+        if now - self.codecarbon_last_log_time < self.opts.codecarbon_log_every_n_secs:
+            return
+
+        elapsed_mins = (now - self.codecarbon_start_time) / 60.0
+        self.codecarbon_last_log_time = now
+        print(
+            "CodeCarbon tracking active "
+            f"({elapsed_mins:.1f} min elapsed). "
+            f"Final results will be written to {os.path.join(self.codecarbon_output_dir, self.codecarbon_output_file)}"
+        )
+
+    def stop_codecarbon_tracking(self):
+        if self.codecarbon_tracker is None:
+            return
+
+        emissions = self.codecarbon_tracker.stop()
+        final_data = getattr(self.codecarbon_tracker, 'final_emissions_data', None)
+        self.codecarbon_tracker = None
+        if emissions is not None:
+            print(f"CodeCarbon emissions: {emissions:.6f} kg CO2eq")
+        if final_data is not None:
+            duration = getattr(final_data, 'duration', None)
+            energy = getattr(final_data, 'energy_consumed', None)
+            gpu_energy = getattr(final_data, 'gpu_energy', None)
+            cpu_energy = getattr(final_data, 'cpu_energy', None)
+            summary = []
+            if duration is not None:
+                summary.append(f"duration={duration / 60.0:.2f} min")
+            if energy is not None:
+                summary.append(f"energy={energy:.6f} kWh")
+            if gpu_energy is not None:
+                summary.append(f"gpu_energy={gpu_energy:.6f} kWh")
+            if cpu_energy is not None:
+                summary.append(f"cpu_energy={cpu_energy:.6f} kWh")
+            if summary:
+                print("CodeCarbon summary: " + ", ".join(summary))
+        if self.codecarbon_output_dir and self.codecarbon_output_file:
+            print(
+                f"CodeCarbon results saved to {os.path.join(self.codecarbon_output_dir, self.codecarbon_output_file)}"
+            )
 
     def calc_loss(self, logits, label, ocodes, feature_euc):
         loss_dict = {}

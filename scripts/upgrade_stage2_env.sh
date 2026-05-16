@@ -19,6 +19,7 @@ export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 # Install missing packages (torch and transformers already present)
 pip install geoopt==0.5.0
 pip install albumentations==1.3.0
+pip install codecarbon
 
 echo "Verifying:"
 python -c "
@@ -26,10 +27,12 @@ import torch
 import transformers
 import geoopt
 import albumentations
+import codecarbon
 print('torch:', torch.__version__)
 print('transformers:', transformers.__version__)
 print('geoopt:', geoopt.__version__)
 print('albumentations:', albumentations.__version__)
+print('codecarbon:', codecarbon.__version__)
 print('CUDA available:', torch.cuda.is_available())
 print('H100 sm_90 supported:', torch.cuda.get_arch_list())
 "

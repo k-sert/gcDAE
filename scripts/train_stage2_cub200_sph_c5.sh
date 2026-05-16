@@ -26,6 +26,8 @@ python scripts/train.py \
     --psp_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=/scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c5 \
+    --use_codecarbon \
+    --codecarbon_project_name=train_stage2_cub200_sph_c5 \
     --geometry spherical \
     --c=5 \
     --feature_size=512 \

@@ -26,6 +26,8 @@ python scripts/train.py \
     --psp_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=/scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp \
+    --use_codecarbon \
+    --codecarbon_project_name=train_stage2_caltech256_hyp \
     --geometry hyperbolic \
     --c=0.1 \
     --feature_size=512 \

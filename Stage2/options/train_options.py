@@ -152,6 +152,18 @@ class TrainOptions:
         self.parser.add_argument('--use_wandb', action="store_true",
                                  help='Whether to use Weights & Biases to track experiment.')
 
+        # arguments for CodeCarbon energy/emissions tracking
+        self.parser.add_argument('--use_codecarbon', action='store_true',
+                                 help='Whether to track energy/emissions with CodeCarbon on rank 0.')
+        self.parser.add_argument('--codecarbon_project_name', default='hypdae_stage2', type=str,
+                                 help='CodeCarbon project name.')
+        self.parser.add_argument('--codecarbon_output_dir', default=None, type=str,
+                                 help='Directory for CodeCarbon outputs. Defaults to exp_dir/logs/codecarbon.')
+        self.parser.add_argument('--codecarbon_measure_power_secs', default=30, type=int,
+                                 help='CodeCarbon power sampling interval in seconds.')
+        self.parser.add_argument('--codecarbon_log_every_n_secs', default=300, type=int,
+                                 help='How often to print CodeCarbon progress messages.')
+
         # arguments for super-resolution
         self.parser.add_argument('--resize_factors', type=str, default=None,
                                  help='For super-res, comma-separated resize factors to use for inference.')
