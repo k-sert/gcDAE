@@ -21,7 +21,7 @@ cd ${SLURM_SUBMIT_DIR}/Stage1
 #   ls /scratch-shared/scur0164/checkpoints/v2-1_512-ema-pruned.ckpt
 SD_CKPT=/scratch-shared/scur0164/checkpoints/v2-1_512-ema-pruned.ckpt
 
-python -u main.py \
+srun python -u main.py \
     --base configs/v1_cub200.yaml \
     --logdir /scratch-shared/scur0164/checkpoints/Stage1/cub200 \
     --pretrained_model ${SD_CKPT} \
