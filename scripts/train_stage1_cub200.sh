@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu_a100
-#SBATCH --gpus=2
+#SBATCH --gpus-per-node=2
+#SBATCH --ntasks-per-node=2
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=stage1_cub200
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
 #SBATCH --time=48:00:00
 #SBATCH --output=logs/stage1_cub200_%A.out
 

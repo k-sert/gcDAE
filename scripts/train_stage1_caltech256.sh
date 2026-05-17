@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=2
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=stage1_caltech256
-#SBATCH --time=0:10:00
+#SBATCH --time=48:00:00
 #SBATCH --output=logs/stage1_caltech256_%A.out
 
 module purge
@@ -27,4 +27,3 @@ srun python -u main.py \
     --pretrained_model ${SD_CKPT} \
     --seed 23 \
     --scale_lr False \
-    --max_epochs 1
