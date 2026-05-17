@@ -1,5 +1,6 @@
 from inspect import isfunction
 import math
+import warnings
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
@@ -11,9 +12,15 @@ from PIL import Image
 try:
     import xformers
     import xformers.ops
+    XFORMERS_IS_AVAILBLE = True
+except Exception as exc:
     XFORMERS_IS_AVAILBLE = False
-except:
-    XFORMERS_IS_AVAILBLE = False
+    warnings.warn(
+        "xformers is not available; falling back to vanilla attention. "
+        "Stage1 can OOM at 64x64 latents without memory-efficient attention. "
+        f"Import error: {exc}",
+        RuntimeWarning,
+    )
 
 
 def exists(val):
@@ -222,7 +229,12 @@ class MemoryEfficientCrossAttention(nn.Module):
         self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
         self.attention_op: Optional[Any] = None
 
-    def forward(self, x, context=None, mask=None):
+    def forward(self, x, context=None, mask=None, encode=False,
+                controller_for_inject=None, inject=False, layernum=None,
+                main_height=None, main_width=None):
+        if exists(mask):
+            raise NotImplementedError("Masking is not implemented for xformers attention.")
+
         q = self.to_q(x)
         context = default(context, x)
         k = self.to_k(context)
@@ -241,8 +253,6 @@ class MemoryEfficientCrossAttention(nn.Module):
         # actually compute the attention, what we cannot get enough of
         out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
 
-        if exists(mask):
-            raise NotImplementedError
         out = (
             out.unsqueeze(0)
             .reshape(b, self.heads, out.shape[1], self.dim_head)
@@ -372,4 +382,3 @@ class SpatialTransformer(nn.Module):
         layernum = layernum + 1 # 和register_recr对应起来
         
         return x + x_in, layernum
-
