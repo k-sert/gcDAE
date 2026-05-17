@@ -112,6 +112,9 @@ lightning:
         project_name: stage1_cub200
         measure_power_secs: 30
         log_every_n_secs: 300
+    metrics_over_trainsteps_checkpoint:
+      params:
+        every_n_train_steps: 2500
   trainer:
     max_epochs: 100
     num_nodes: 1
