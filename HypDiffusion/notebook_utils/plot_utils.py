@@ -10,7 +10,6 @@ from PIL import Image
 from notebook_utils.pmath import *
 
 
-
 # necessary functions
 def tensor2im(var):
 	var = var.cpu().detach().transpose(0, 2).transpose(0, 1).numpy()
@@ -20,10 +19,12 @@ def tensor2im(var):
 	var = var * 255
 	return Image.fromarray(var.astype('uint8'))
 
+
 # rescale function
 def rescale(target_radius, x):
     r_change = target_radius/dist0(gmath.mobius_scalar_mul(r = torch.tensor(1), x = x, k = torch.tensor(-1.0)))
     return gmath.mobius_scalar_mul(r = r_change, x = x, k = torch.tensor(-1.0))
+
 
 # function for generating images with fixed radius (also contains raw geodesic images of 'shorten' images, and stretched images to boundary )
 def geo_interpolate_fix_r(x,y,interval,target_radius):
@@ -64,6 +65,7 @@ def geo_interpolate_fix_r(x,y,interval,target_radius):
         images_to_plot_boundary.append(image_boundary)
     
     return images_to_plot_raw_geo, images_to_plot_target_radius, images_to_plot_boundary, dist_to_start
+
 
 def geo_interpolate_fix_r_with_codes(x,y,interval,target_radius):
     # please use this with batch_size = 1
@@ -117,7 +119,6 @@ def generate_perturbation_r_with_raw_inv(x, target_radius, interval, seed, size)
         ratio = target_rad_perturb/dist0(perturb[i])
         perturb_current = gmath.mobius_scalar_mul(r = ratio, x = perturb[i], k = torch.tensor(-1.0))
 
-
         if False:
             with torch.no_grad():
                 image, _, _, _, _ = net.forward(x = perturb.unsqueeze(0), codes=None, batch_size = 1, input_feature=True, input_code = False)
@@ -140,6 +141,7 @@ def generate_perturbation_r_with_raw_inv(x, target_radius, interval, seed, size)
     raw_image,_,_,_ = geo_interpolate_fix_r(x = x,y = perturb_current, interval = [0] ,target_radius = target_radius)
     images_perturbed.insert(0, raw_image[0])
     return images_perturbed, dist_perturbed
+
 
 def generate_perturbation_r_with_raw_inv_pick(x, y, target_radius, interval, seed):
     # 3 arguments, raw image feature, target radius and interval(actually the ratio).

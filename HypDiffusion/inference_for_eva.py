@@ -30,7 +30,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # local path for 
 
 # we utilize geoopt package for hyperbolic calculation
 
-
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
