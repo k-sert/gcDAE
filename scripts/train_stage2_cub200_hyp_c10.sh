@@ -18,17 +18,19 @@ export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 cd ${SLURM_SUBMIT_DIR}/Stage2
 
 # TODO: Set to best Stage 1 checkpoint after Stage 1 training completes
-# Find it with: ls /scratch-shared/scur0164/checkpoints/Stage1/cub200/*/checkpoints/
-STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200/PLACEHOLDER/checkpoints/epoch=XXXXXX.ckpt
+STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
+ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
+DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/cub200_hyp_c10
+CC_PROJECT_NAME=train_stage2_cub200_hyp_c10
 
 python scripts/train.py \
     --dataset_type=cub200_encode \
     --stage1_checkpoint_path=${STAGE1_CKPT} \
-    --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
-    --exp_dir=/scratch-shared/scur0164/checkpoints/Stage2/cub200_hyp_c10 \
+    --encoder_version=${ENCODER_VERSION} \
+    --exp_dir=${DEST_DIR} \
     --seed 23 \
     --use_codecarbon \
-    --codecarbon_project_name=train_stage2_cub200_hyp_c10 \
+    --codecarbon_project_name=${CC_PROJECT_NAME} \
     --geometry hyperbolic \
     --c=10 \
     --feature_size=512 \
