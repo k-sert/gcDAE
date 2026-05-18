@@ -2,11 +2,11 @@
 
 <div align="center">
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-GhostK030-yellow)](https://huggingface.co/GhostK030)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-GhostK030-yellow)](https://huggingface.co/k-sert)
 
-**[Kagan Sert](https://github.com/k-sert)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Casper Schuttrups](https://github.com/CasperWS)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)**
+**[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** . **[Casper Schuttrups](https://github.com/CasperWS)**
 
-*Deep Learning 2, 2026*
+*University of Amsterdam - Deep Learning 2, 2026*
 
 </div>
 
@@ -52,7 +52,7 @@ conda activate hypdae
 
 ### Model Weights
 
-Pre-trained Stage 1 and Stage 2 checkpoints will be available from [Hugging Face](https://huggingface.co/GhostK030). Place downloaded checkpoints under a local `checkpoints/` directory, or update the paths in the relevant YAML files under `HypDiffusion/configs/stable-diffusion/`.
+Pre-trained Stage 1 and Stage 2 checkpoints will be available from [Hugging Face](https://huggingface.co/k-sert). Place downloaded checkpoints under a local `checkpoints/` directory, or update the paths in the relevant YAML files under `HypDiffusion/configs/stable-diffusion/`.
 
 ## 📂 Data Preparation
 
@@ -60,8 +60,8 @@ We use the following datasets for training and evaluation. Please download and u
 
 | Dataset | Link | Description |
 | :--- | :--- | :--- |
-| **CUB-200-2011** | [Download](https://dl.allaboutbirds.org/nabirds) | Fine-grained bird image dataset used for class-conditional generation experiments. |
-| **Caltech-256** | [Download](https://data.caltech.edu/records/nyy15-4j048) | Object recognition dataset with 256 object categories plus a clutter class. |
+| **CUB-200-2011** | [Download](https://dl.allaboutbirds.org/nabirds) | Fine-grained bird image dataset |
+| **Caltech-256** | [Download](https://data.caltech.edu/records/nyy15-4j048) | Object recognition dataset |
 
 **Recommended Directory Structure:**
 
@@ -84,10 +84,10 @@ Image generation is handled through `HypDiffusion/inference_for_eva.py`. Choose 
 cd HypDiffusion
 
 python inference_for_eva.py \
-  --config_path configs/stable-diffusion/v2_inference_cub200_hyp_c5.yaml \
+  --config_path configs/stable-diffusion/v2_inference_[dataset]_[geometry]_[curvature].yaml \
   --ckpt /path/to/stage1_diffusion.ckpt \
   --image_folder /path/to/data/cub/test \
-  --outdir outputs/cub200_hyp_c5
+  --outdir /path/to/output_folder
 ```
 
 Available CUB/Caltech configs include Euclidean, hyperbolic, and spherical variants under `HypDiffusion/configs/stable-diffusion/`.
@@ -107,12 +107,20 @@ bash scripts/train_stage1_caltech256.sh
 
 ```bash
 bash scripts/train_stage2_cub200_euc.sh
+bash scripts/train_stage2_cub200_hyp_c1.sh
 bash scripts/train_stage2_cub200_hyp_c5.sh
+bash scripts/train_stage2_cub200_hyp_c10.sh
+bash scripts/train_stage2_cub200_sph_c1.sh
 bash scripts/train_stage2_cub200_sph_c5.sh
+bash scripts/train_stage2_cub200_sph_c10.sh
 
 bash scripts/train_stage2_caltech256_euc.sh
+bash scripts/train_stage2_caltech256_hyp_c1.sh
 bash scripts/train_stage2_caltech256_hyp_c5.sh
+bash scripts/train_stage2_caltech256_hyp_c10.sh
+bash scripts/train_stage2_caltech256_sph_c1.sh
 bash scripts/train_stage2_caltech256_sph_c5.sh
+bash scripts/train_stage2_caltech256_sph_c10.sh
 ```
 
 Before running the scripts, adjust dataset paths, checkpoint paths, and output directories to match your machine or cluster environment.
