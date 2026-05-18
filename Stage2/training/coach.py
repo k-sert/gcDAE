@@ -2,7 +2,6 @@ import sys
 sys.path.append(".")
 sys.path.append("..")
 
-from training.ranger import Ranger
 from models.hyp_clip import hae_clip
 from models.latent_codes_pool import LatentCodesPool
 from models.discriminator import LatentCodesDiscriminator
@@ -307,11 +306,11 @@ class Coach:
             params = list(self.net.module.transformer_encoder.parameters())
             
         # params = list(self.net.module.transformer_decoder.parameters())
-        if self.opts.optim_name == 'adam':
+        if self.opts.optim_name == 'adamw':
             optimizer = torch.optim.AdamW(params, lr=self.opts.learning_rate)
             scheduler = StepLR(optimizer, step_size=self.opts.step_size, gamma=self.opts.gamma)
         else:
-            optimizer = Ranger(params, lr=self.opts.learning_rate)
+            raise ValueError(f'Unsupported optimizer: {self.opts.optim_name}')
         return optimizer, scheduler
 
     def configure_datasets(self):
