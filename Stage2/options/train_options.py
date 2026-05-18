@@ -95,7 +95,9 @@ class TrainOptions:
         self.parser.add_argument(
             '--checkpoint_path', default=None, type=str, help='Path to HAE model checkpoint')
         self.parser.add_argument(
-            '--psp_checkpoint_path', default=None, type=str, help='Path to pSp model checkpoint')
+            '--stage1_checkpoint_path', '--psp_checkpoint_path', default=None, type=str,
+            dest='stage1_checkpoint_path',
+            help='Path to the Stage 1 checkpoint. --psp_checkpoint_path is kept as a deprecated alias.')
 
         self.parser.add_argument(
             '--max_steps', default=5000, type=int, help='Maximum number of training steps')
@@ -209,6 +211,7 @@ class TrainOptions:
 
     def parse(self):
         opts = self.parser.parse_args()
+        opts.psp_checkpoint_path = opts.stage1_checkpoint_path
         if opts.geometry is None:
             opts.geometry = 'hyperbolic' if opts.hyperbolic else 'euclidean'
         else:
