@@ -1,5 +1,4 @@
 model:
-  base_learning_rate: 1.0e-05
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
     parameterization: "eps"
@@ -14,18 +13,8 @@ model:
     channels: 4
     cond_stage_trainable: true
     conditioning_key: crossattn
-    monitor: val/loss_simple_ema
     scale_factor: 0.18215
     use_ema: False
-
-    scheduler_config:
-      target: ldm.lr_scheduler.LambdaLinearScheduler
-      params:
-        warm_up_steps: [ 10000 ]
-        cycle_lengths: [ 10000000000000 ]
-        f_start: [ 1.e-6 ]
-        f_max: [ 1. ]
-        f_min: [ 1. ]
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
@@ -50,7 +39,6 @@ model:
       target: ldm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
-        monitor: val/rec_loss
         ddconfig:
           double_z: true
           z_channels: 4
@@ -81,27 +69,3 @@ model:
           checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c5/checkpoints/best_model.pt
           psp_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/PLACEHOLDER/checkpoints/epoch=XXXXXX.ckpt
 
-data:
-  target: main.DataModuleFromConfig
-  params:
-    batch_size: 24
-    wrap: False
-    train:
-      target: ldm.data.reconstruction.ImagesDataset
-      params:
-        dataset_type: cub200_encode
-    validation:
-      target: ldm.data.reconstruction.ImagesDataset
-      params:
-        dataset_type: cub200_encode
-    test:
-      target: ldm.data.reconstruction.ImagesDataset
-      params:
-        dataset_type: cub200_encode
-
-lightning:
-  trainer:
-    max_epochs: 40
-    num_nodes: 1
-    accelerator: 'gpu'
-    gpus: "1"
