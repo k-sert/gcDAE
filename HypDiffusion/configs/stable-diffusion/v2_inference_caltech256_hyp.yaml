@@ -63,9 +63,8 @@ model:
           transformer_layers: 30
           dataset_type: caltech256_encode
           geometry: hyperbolic
-          hyperbolic: true
           c: 0.1
           sample_mode: False
-          checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp/checkpoints/best_model.pt
-          psp_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/caltech256/PLACEHOLDER/checkpoints/epoch=XXXXXX.ckpt
+          s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt
+          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp/checkpoints/best_model.pt
 

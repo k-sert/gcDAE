@@ -63,9 +63,8 @@ model:
           transformer_layers: 30
           dataset_type: cub200_encode
           geometry: spherical
-          hyperbolic: false
           c: 10
           sample_mode: False
-          checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c10/checkpoints/best_model.pt
-          psp_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/PLACEHOLDER/checkpoints/epoch=XXXXXX.ckpt
+          s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
+          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c10/checkpoints/best_model.pt
 
