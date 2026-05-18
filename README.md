@@ -1,15 +1,12 @@
-# HypDAE: Hyperbolic Diffusion Autoencoders for Hierarchical Few-shot Image Generation (ICCV 2025)
+# Geometry-Aware Semantic Latent Spaces for Diffusion-Based Image Generation
 
 <div align="center">
 
-[![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://lingxiao-li.github.io/hypdae.github.io/)
-[![arXiv](https://img.shields.io/badge/arXiv-2411.17784-b31b1b.svg)](https://arxiv.org/abs/2411.17784)
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/lingxiao2049/HypDAE)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-GhostK030-yellow)](https://huggingface.co/GhostK030)
 
-**[Lingxiao Li](https://gwang-kim.github.io/)** · **Kaixuan Fan** · **[Boqing Gong](https://boqinggong.github.io/)** · **[Xiangyu Yue](https://xyue.io/)**
+**[Kagan Sert](https://github.com/k-sert)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Casper Schuttrups](https://github.com/CasperWS)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)**
 
-*International Conference on Computer Vision (ICCV), 2025*
+*Deep Learning 2, 2026*
 
 </div>
 
@@ -19,7 +16,7 @@
   <img src="assets/Hierarchy.png" width="90%">
 </div>
 
-> **Abstract:** Few-shot image generation aims to generate diverse and high-quality images for an unseen class given only a few examples in that class. A key challenge in this task is balancing category consistency and image diversity, which often compete with each other. Moreover, existing methods offer limited control over the attributes of newly generated images. In this work, we propose **Hyperbolic Diffusion Autoencoders (HypDAE)**, a novel approach that operates in hyperbolic space to capture hierarchical relationships among images from seen categories. By leveraging pre-trained foundation models, HypDAE generates diverse new images for unseen categories with exceptional quality by varying stochastic subcodes or semantic codes. Most importantly, the hyperbolic representation introduces an additional degree of control over semantic diversity through the adjustment of radii within the hyperbolic disk.
+> **Abstract:** This project studies how the geometry of semantic latent spaces affects diffusion-based image generation. Starting from a two-stage HypDAE-style pipeline, we compare Euclidean, hyperbolic, and spherical Stage 2 representations for class-conditional image generation on hierarchical visual datasets. The goal is to understand whether geometry-aware latent spaces can provide better semantic structure, controllable diversity, and more meaningful perturbations than a purely Euclidean representation. In particular, the HypDiffusion generation code combines a Stage 1 diffusion checkpoint with a Stage 2 semantic encoder checkpoint to generate images while varying the geometry of the learned latent space.
 
 <div align="center">
   <img src="assets/Poincare.png" width="45%"> <img src="assets/Pipeline.png" width="45%">
@@ -27,23 +24,35 @@
 
 ## 🛠️ Setup
 
-Our codebase is built on [TF-ICON](https://github.com/Shilin-LU/TF-ICON) and [Paint-by-Example](https://github.com/Fantasy-Studio/Paint-by-Example).
+Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We adapt the original pipeline to compare Euclidean, hyperbolic, and spherical semantic latent spaces for CUB-200-2011 and Caltech-256.
 
 ### Environment
 
 ```bash
 # Clone the repository
-git clone [https://github.com/lingxiao-li/HypDAE.git](https://github.com/lingxiao-li/HypDAE.git)
-cd HypDAE/HypDiffusion
+git clone https://github.com/k-sert/HypDAE-private.git
+cd HypDAE-private
+```
 
-# Create and activate the conda environment
-conda env create -f hypdae_env.yaml
+Create the environment that matches the part of the project you want to run:
+
+```bash
+# Stage 1 training
+conda env create -f Stage1/environment.yaml
+conda activate stage1_env
+
+# Stage 2 training
+conda env create -f Stage2/environment.yaml
+conda activate stage2_env
+
+# HypDiffusion generation
+conda env create -f HypDiffusion/hypdae_env.yaml
 conda activate hypdae
-````
+```
 
 ### Model Weights
 
-Download the pre-trained HypDAE checkpoints from [Hugging Face](https://huggingface.co/lingxiao2049/HypDAE) and place them in the `checkpoints/` directory.
+Pre-trained Stage 1 and Stage 2 checkpoints will be available from [Hugging Face](https://huggingface.co/GhostK030). Place downloaded checkpoints under a local `checkpoints/` directory, or update the paths in the relevant YAML files under `HypDiffusion/configs/stable-diffusion/`.
 
 ## 📂 Data Preparation
 
@@ -51,67 +60,63 @@ We use the following datasets for training and evaluation. Please download and u
 
 | Dataset | Link | Description |
 | :--- | :--- | :--- |
-| **AnimalFaces** | [HuggingFace](https://huggingface.co/lingxiao2049/HypDAE/blob/main/animals.zip) | 149 carnivorous animal classes |
-| **Flowers** | [HuggingFace](https://huggingface.co/lingxiao2049/HypDAE/blob/main/flowers.zip) | Oxford 102 Flower Dataset |
-| **VGGFaces** | [HuggingFace](https://huggingface.co/lingxiao2049/HypDAE/blob/main/vggfaces.zip) | Face recognition dataset |
-| **NABirds** | [Download](https://dl.allaboutbirds.org/nabirds) | North America Birds dataset |
-| **FFHQ** | [Kaggle](https://www.kaggle.com/datasets/arnaud58/flickrfaceshq-dataset-ffhq) | Flickr-Faces-HQ Dataset |
+| **CUB-200-2011** | [Download](https://dl.allaboutbirds.org/nabirds) | Fine-grained bird image dataset used for class-conditional generation experiments. |
+| **Caltech-256** | [Download](https://data.caltech.edu/records/nyy15-4j048) | Object recognition dataset with 256 object categories plus a clutter class. |
 
 **Recommended Directory Structure:**
 
 ```text
-HypDAE/
+HypDAE-private/
 ├── HypDiffusion/
+├── Stage1/
+├── Stage2/
 ├── data/
-│   ├── animals/
-│   ├── flowers/
-│   ├── vggfaces/
-│   ├── nabirds/
-│   └── ffhq/
+│   ├── cub/
+│   └── caltech/
 └── ...
 ```
 
 ## 🚀 Inference
 
-We provide two modes for inference: interactive notebook demo and batch generation script.
-
-### 1\. Interactive Demo
-
-For interactive visualization and testing, use the provided Jupyter Notebook. You can modify the file paths inside the notebook to test different images.
+Image generation is handled through `HypDiffusion/inference_for_eva.py`. Choose the YAML that matches the dataset and geometry you want to evaluate, then point the script to your Stage 1 diffusion checkpoint and image folder.
 
 ```bash
-# Open the notebook
-jupyter notebook HypDiffusion/test_ddim.ipynb
+cd HypDiffusion
+
+python inference_for_eva.py \
+  --config_path configs/stable-diffusion/v2_inference_cub200_hyp_c5.yaml \
+  --ckpt /path/to/stage1_diffusion.ckpt \
+  --image_folder /path/to/data/cub/test \
+  --outdir outputs/cub200_hyp_c5
 ```
 
-### 2\. Batch Generation
-
-For batch generation and evaluation, run the following script. You can adjust the parameters (e.g., related paths) inside the script or pass them as arguments.
-
-```bash
-# Run batch inference
-sh HypDiffusion/inference_for_eva.py
-```
+Available CUB/Caltech configs include Euclidean, hyperbolic, and spherical variants under `HypDiffusion/configs/stable-diffusion/`.
 
 ## 🏋️‍♂️ Training
 
+The project is organized as a two-stage pipeline.
+
+**Stage 1** trains the diffusion autoencoder backbone for the target dataset:
+
+```bash
+bash scripts/train_stage1_cub200.sh
+bash scripts/train_stage1_caltech256.sh
+```
+
+**Stage 2** trains the semantic latent-space component on top of a Stage 1 checkpoint. Separate launch scripts are provided for Euclidean, hyperbolic, and spherical variants:
+
+```bash
+bash scripts/train_stage2_cub200_euc.sh
+bash scripts/train_stage2_cub200_hyp_c5.sh
+bash scripts/train_stage2_cub200_sph_c5.sh
+
+bash scripts/train_stage2_caltech256_euc.sh
+bash scripts/train_stage2_caltech256_hyp_c5.sh
+bash scripts/train_stage2_caltech256_sph_c5.sh
+```
+
+Before running the scripts, adjust dataset paths, checkpoint paths, and output directories to match your machine or cluster environment.
 
 ## 🙏 Acknowledgments
 
-This project is based on [TF-ICON](https://github.com/Shilin-LU/TF-ICON) and [Paint-by-Example](https://github.com/Fantasy-Studio/Paint-by-Example). We thank the authors for their open-source contributions.
-
-## 📝 Citation
-
-If you find this code or our paper useful for your research, please consider citing:
-
-```bibtex
-@inproceedings{Li25HypDAE,
-  title     = {HypDAE: Hyperbolic Diffusion Autoencoders for Hierarchical Few-shot Image Generation},
-  author    = {Lingxiao Li and Kaixuan Fan and Boqing Gong and Xiangyu Yue},
-  booktitle = {International Conference on Computer Vision (ICCV)},
-  year      = {2025}
-}
-```
-
-```
-```
+This project is based on [HypDAE](https://github.com/lingxiao-li/HypDAE) and [Hyperbolic-Flow-Matching](https://github.com/federicavaleau/Hyperbolic-Flow-Matching). We thank the authors for their open-source contributions.
