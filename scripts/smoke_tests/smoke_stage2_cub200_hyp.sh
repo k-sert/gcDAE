@@ -17,7 +17,7 @@ export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 
 cd ${SLURM_SUBMIT_DIR}/Stage2
 
-STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200_smoke/2026-05-14T14-08-06_v1_cub200/checkpoints/epoch=000000.ckpt
+STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
 ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
 DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/smoke/cub200_hyp_${SLURM_JOB_ID}
 CC_PROJECT_NAME=smoke_stage2_cub200_hyp
