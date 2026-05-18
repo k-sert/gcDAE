@@ -51,7 +51,7 @@ class TrainOptions:
         self.parser.add_argument(
             '--gamma', default=0.5, type=float, help='Gamma for learning rate decay')
         self.parser.add_argument(
-            '--optim_name', default='ranger', type=str, help='Which optimizer to use')
+            '--optim_name', default='adamw', choices=['adamw'], type=str, help='Which optimizer to use')
         self.parser.add_argument('--train_decoder', default=False,
                                  type=bool, help='Whether to train the decoder model')
         self.parser.add_argument('--start_from_latent_avg', action='store_true',
