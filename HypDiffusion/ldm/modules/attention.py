@@ -1,5 +1,6 @@
 from inspect import isfunction
 import math
+import warnings
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
@@ -13,9 +14,15 @@ from PIL import Image
 try:
     import xformers
     import xformers.ops
+    XFORMERS_IS_AVAILBLE = True
+except Exception as exc:
     XFORMERS_IS_AVAILBLE = False
-except:
-    XFORMERS_IS_AVAILBLE = False
+    warnings.warn(
+        "xformers is not available; falling back to vanilla attention. "
+        "HypDiffusion can OOM at 64x64 latents without memory-efficient attention. "
+        f"Import error: {exc}",
+        RuntimeWarning,
+    )
 
 
 def exists(val):
@@ -374,4 +381,3 @@ class SpatialTransformer(nn.Module):
         layernum = layernum + 1 # 和register_recr对应起来
         
         return x + x_in, layernum
-
