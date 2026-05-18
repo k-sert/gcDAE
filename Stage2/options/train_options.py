@@ -11,7 +11,7 @@ class TrainOptions:
     def initialize(self):
         self.parser.add_argument(
             '--exp_dir', type=str, help='Path to experiment output directory')
-        self.parser.add_argument('--dataset_type', default='ffhq_encode',
+        self.parser.add_argument('--dataset_type', default='cub200_encode',
                                  type=str, help='Type of dataset/experiment to run')
         self.parser.add_argument(
             '--encoder_type', default='CLIPImageEmbedder', type=str, help='Which encoder to use')
@@ -89,7 +89,7 @@ class TrainOptions:
                                  
 
         self.parser.add_argument(
-            '--stylegan_weights', default=model_paths['stylegan_ffhq'], type=str, help='Path to StyleGAN model weights')
+            '--stylegan_weights', default=None, type=str, help='Path to StyleGAN model weights')
         self.parser.add_argument('--stylegan_size', default=1024, type=int,
                                  help='size of pretrained StyleGAN Generator')
         self.parser.add_argument(
