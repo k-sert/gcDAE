@@ -72,7 +72,7 @@ HypDAE inference requires an experiment-specific config file. For pretrained mod
 | Config field | Meaning |
 | --- | --- |
 | `checkpoint_path` | Stage 2 encoder checkpoint |
-| `psp_checkpoint_path` | Stage 1 checkpoint |
+| `stage1_checkpoint_path` | Stage 1 checkpoint |
 | `encoder_version` | CLIP/local encoder checkpoint path |
 
 The smoke inference config is available at:

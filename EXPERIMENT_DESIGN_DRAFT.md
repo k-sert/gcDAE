@@ -112,7 +112,7 @@ For pretrained or trained models, the important fields are:
 | Config field | Meaning |
 | --- | --- |
 | `checkpoint_path` | Stage 2 encoder checkpoint |
-| `psp_checkpoint_path` | Stage 1 checkpoint |
+| `stage1_checkpoint_path` | Stage 1 checkpoint |
 | `encoder_version` | CLIP/local encoder checkpoint path |
 | `dataset_type` | Dataset identifier used by the data loader |
 | `hyperbolic` or geometry-specific option | Selects the intended latent geometry behavior |
