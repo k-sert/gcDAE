@@ -12,16 +12,16 @@ This setup took about 4 hours, mostly because of installation and dependency res
 
 Important environment fixes:
 
-- The original environment files were not directly usable because of local editable install entries such as `-e .`. Those local editable entries were removed and fixed versions were saved as new YAML files.
-- Stage 2 dependency resolution from the authors' original environment was not compatible with conda and caused an infinite solving loop. This was fixed by creating `Stage2/environment/psp_env_fixed.yaml`.
+- The original environment files were not directly usable because of local editable install entries such as `-e .`. Those local editable entries were removed from the current YAML files.
+- Stage 2 dependency resolution from the authors' original environment was not compatible with conda and caused an infinite solving loop. The current Stage 2 environment is documented in `Stage2/environment/psp_env.yaml`.
 - HypDAE inference required the `geoopt` library, which was missing initially and has now been installed.
 
 Fixed environment files in the repository:
 
 | Component | Fixed environment file |
 | --- | --- |
-| Stage 1 | `Stage1/environment_no_editable.yaml` |
-| Stage 2 | `Stage2/environment/psp_env_fixed.yaml` |
+| Stage 1 | `Stage1/environment.yaml` |
+| Stage 2 | `Stage2/environment/psp_env.yaml` |
 | HypDAE / HypDiffusion | `HypDiffusion/tf_icon_env_no_editable.yaml` |
 
 When working on Snellius, use the datasets and conda environments from the HPC node/scratch-shared location, not from the home directory. At the start of each SSH session, load Miniconda and activate the correct environment:
