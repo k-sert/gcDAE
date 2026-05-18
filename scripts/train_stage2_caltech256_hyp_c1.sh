@@ -23,7 +23,7 @@ ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
 DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp_c1
 CC_PROJECT_NAME=train_stage2_caltech256_hyp_c1
 
-python scripts/train.py \
+srun python scripts/train.py \
     --dataset_type=caltech256_encode \
     --stage1_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=${ENCODER_VERSION} \
@@ -39,15 +39,15 @@ python scripts/train.py \
     --learning_rate=0.001 \
     --step_size=5000 \
     --gamma=0.5 \
-    --optim_name=adam \
+    --optim_name=adamw \
     --batch_size=256 \
     --test_batch_size=64 \
     --workers=8 \
     --test_workers=4 \
-    --max_steps=15000 \
+    --max_steps=100000 \
     --save_interval=5000 \
     --board_interval=50 \
-    --val_interval=200 \
+    --val_interval=1000 \
     --early_stop_patience=20 \
     --early_stop_min_delta=0.0001 \
     --geometry_lambda=1.0 \

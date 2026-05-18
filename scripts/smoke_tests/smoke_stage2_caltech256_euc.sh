@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_h100
+#SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
 #SBATCH --job-name=smk_s2_cal_euc
 #SBATCH --ntasks=1
@@ -18,14 +18,18 @@ export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
 cd ${SLURM_SUBMIT_DIR}/Stage2
 
 STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/caltech256_smoke/2026-05-14T14-12-29_v1_caltech256/checkpoints/epoch=000000.ckpt
-EXP_DIR=/scratch-shared/scur0164/checkpoints/Stage2/smoke/caltech256_euc_${SLURM_JOB_ID}
+ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
+DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/smoke/caltech256_euc_${SLURM_JOB_ID}
+CC_PROJECT_NAME=smoke_stage2_caltech256_euc
 
-python scripts/train.py \
+srun python scripts/train.py \
     --dataset_type=caltech256_encode \
     --stage1_checkpoint_path=${STAGE1_CKPT} \
-    --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
-    --exp_dir=${EXP_DIR} \
+    --encoder_version=${ENCODER_VERSION} \
+    --exp_dir=${DEST_DIR} \
     --seed 23 \
+    --use_codecarbon \
+    --codecarbon_project_name=${CC_PROJECT_NAME} \
     --geometry euclidean \
     --feature_size=512 \
     --transformer_layers=30 \
@@ -33,7 +37,7 @@ python scripts/train.py \
     --learning_rate=0.001 \
     --step_size=2 \
     --gamma=0.5 \
-    --optim_name=adam \
+    --optim_name=adamw \
     --batch_size=256 \
     --test_batch_size=4 \
     --workers=2 \
@@ -47,7 +51,7 @@ python scripts/train.py \
     --reverse_lambda=0.1 \
     --cosine_lambda=0.1 \
     --ngpus-per-node 1 \
-    --dist-url tcp://localhost:10103 \
+    --dist-url 'tcp://localhost:10103' \
     --multiprocessing-distributed \
     --dist-backend nccl \
     --world-size 1 \
