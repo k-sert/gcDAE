@@ -536,10 +536,10 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         return encoder
 
     def load_weights(self):
-        if self.opts.checkpoint_path is not None:
+        if self.opts.s2_checkpoint_path is not None:
             print('Loading HAE from checkpoint: {}'.format(
-                self.opts.checkpoint_path))
-            ckpt = torch.load(self.opts.checkpoint_path,
+                self.opts.s2_checkpoint_path))
+            ckpt = torch.load(self.opts.s2_checkpoint_path,
                               map_location=torch.device('cpu'))
             from collections import OrderedDict
             new_state_dict = OrderedDict()
@@ -573,7 +573,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 get_keys(ckpt, 'linear_encoder'), strict=True)
             self.linear_decoder.load_state_dict(
                 get_keys(ckpt, 'linear_decoder'), strict=True)
-            ckpt_clip = torch.load(self.opts.stage1_checkpoint_path,
+            ckpt_clip = torch.load(self.opts.s1_checkpoint_path,
                                    map_location=torch.device('cpu'))
             new_state_dict_clip = OrderedDict()
             for k, v in ckpt_clip['state_dict'].items():
@@ -585,7 +585,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
             # self.encoder.load_state_dict(get_keys(ckpt, 'encoder'), strict=True)
         else:
             print('Initializing hyperediting from scratch')
-            ckpt = torch.load(self.opts.stage1_checkpoint_path,
+            ckpt = torch.load(self.opts.s1_checkpoint_path,
                               map_location=torch.device('cpu'))
             from collections import OrderedDict
             new_state_dict = OrderedDict()
@@ -655,12 +655,10 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
 
     def set_opts(self, opts):
         self.opts = opts
-        stage1_checkpoint_path = getattr(opts, 'stage1_checkpoint_path', None)
-        psp_checkpoint_path = getattr(opts, 'psp_checkpoint_path', None)
-        if stage1_checkpoint_path is None:
-            self.opts.stage1_checkpoint_path = psp_checkpoint_path
-        if psp_checkpoint_path is None:
-            self.opts.psp_checkpoint_path = self.opts.stage1_checkpoint_path
+        if not hasattr(self.opts, 's1_checkpoint_path'):
+            raise ValueError('Missing required opts.s1_checkpoint_path')
+        if not hasattr(self.opts, 's2_checkpoint_path'):
+            raise ValueError('Missing required opts.s2_checkpoint_path')
 
     def encode(self, image, input_feature=False, input_code=False, device=None):
         if device is not None:
