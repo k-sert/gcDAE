@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-GhostK030-yellow)](https://huggingface.co/k-sert)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert)
 
 **[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** . **[Casper Schuttrups](https://github.com/CasperWS)**
 
@@ -56,7 +56,7 @@ Pre-trained Stage 1 and Stage 2 checkpoints will be available from [Hugging Face
 
 ## 📂 Data Preparation
 
-We use the following datasets for training and evaluation. Please download and unzip them into the `data/` folder.
+We use the following datasets for training and evaluation. Please download and unzip them into a `data/` folder.
 
 | Dataset | Link | Description |
 | :--- | :--- | :--- |
@@ -108,19 +108,11 @@ bash scripts/train_stage1_caltech256.sh
 ```bash
 bash scripts/train_stage2_cub200_euc.sh
 bash scripts/train_stage2_cub200_hyp_c1.sh
-bash scripts/train_stage2_cub200_hyp_c5.sh
-bash scripts/train_stage2_cub200_hyp_c10.sh
 bash scripts/train_stage2_cub200_sph_c1.sh
-bash scripts/train_stage2_cub200_sph_c5.sh
-bash scripts/train_stage2_cub200_sph_c10.sh
 
 bash scripts/train_stage2_caltech256_euc.sh
 bash scripts/train_stage2_caltech256_hyp_c1.sh
-bash scripts/train_stage2_caltech256_hyp_c5.sh
-bash scripts/train_stage2_caltech256_hyp_c10.sh
 bash scripts/train_stage2_caltech256_sph_c1.sh
-bash scripts/train_stage2_caltech256_sph_c5.sh
-bash scripts/train_stage2_caltech256_sph_c10.sh
 ```
 
 Before running the scripts, adjust dataset paths, checkpoint paths, and output directories to match your machine or cluster environment.
