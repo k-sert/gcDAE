@@ -22,7 +22,7 @@ EXP_DIR=/scratch-shared/scur0164/checkpoints/Stage2/smoke/cub200_sph_${SLURM_JOB
 
 python scripts/train.py \
     --dataset_type=cub200_encode \
-    --psp_checkpoint_path=${STAGE1_CKPT} \
+    --stage1_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14 \
     --exp_dir=${EXP_DIR} \
     --seed 23 \
