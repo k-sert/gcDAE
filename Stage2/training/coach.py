@@ -379,7 +379,7 @@ class Coach:
 
                 if self.global_step == self.opts.max_steps:
                     print('OMG, finished training!')
-                    break
+                    return
 
                 self.global_step += 1
 
