@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 from torch import nn, autograd
 import torch
+import geoopt
 import os
 import random
 import time
@@ -307,7 +308,23 @@ class Coach:
             
         # params = list(self.net.module.transformer_decoder.parameters())
         if self.opts.optim_name == 'adamw':
-            optimizer = torch.optim.AdamW(params, lr=self.opts.learning_rate)
+            if self.opts.geometry == 'hyperbolic':
+                stabilize = getattr(self.opts, 'riemannian_stabilize_steps', 10)
+                stabilize = None if stabilize <= 0 else int(stabilize)
+                print(
+                    'using geoopt RiemannianAdam for hyperbolic geometry '
+                    f'(lr={self.opts.learning_rate}, stabilize={stabilize})'
+                )
+                optimizer = geoopt.optim.RiemannianAdam(
+                    params, lr=self.opts.learning_rate, stabilize=stabilize)
+            else:
+                optimizer = torch.optim.AdamW(params, lr=self.opts.learning_rate)
+            scheduler = StepLR(optimizer, step_size=self.opts.step_size, gamma=self.opts.gamma)
+        elif self.opts.optim_name == 'riemannian_adam':
+            stabilize = getattr(self.opts, 'riemannian_stabilize_steps', 10)
+            stabilize = None if stabilize <= 0 else int(stabilize)
+            optimizer = geoopt.optim.RiemannianAdam(
+                params, lr=self.opts.learning_rate, stabilize=stabilize)
             scheduler = StepLR(optimizer, step_size=self.opts.step_size, gamma=self.opts.gamma)
         else:
             raise ValueError(f'Unsupported optimizer: {self.opts.optim_name}')
@@ -341,6 +358,7 @@ class Coach:
                 logits, feature_dist, ocodes, feature_euc = self.net.forward(
                     images, batch_size=bsz, return_latents=True)
                 loss, encoder_loss_dict, id_logs = self.calc_loss(logits, label, ocodes, feature_euc)
+                self.add_geometry_diagnostics(encoder_loss_dict, logits, feature_dist)
                 pred = logits.argmax(dim=1, keepdim=True)
                 correct += pred.eq(label.view_as(pred)).sum().item()
                 loss_dict = {**loss_dict, **encoder_loss_dict}
@@ -398,6 +416,7 @@ class Coach:
                 logits, feature_dist, ocodes, feature_euc = self.net.forward(
                     x, batch_size=bsz, return_latents=True)
                 loss, cur_loss_dict, id_logs = self.calc_loss(logits, label, ocodes, feature_euc)
+                self.add_geometry_diagnostics(cur_loss_dict, logits, feature_dist)
                 pred = logits.argmax(dim=1, keepdim=True)
                 correct += pred.eq(label.view_as(pred)).sum().item()
                 data_size += bsz
@@ -412,6 +431,42 @@ class Coach:
         self.log_metrics(loss_dict, prefix='val')
         self.net.train()
         return loss_dict
+
+    def add_geometry_diagnostics(self, loss_dict, logits, feature_dist):
+        if getattr(self.opts, 'geometry', None) != 'hyperbolic':
+            return
+        with torch.no_grad():
+            module = self.net.module if hasattr(self.net, 'module') else self.net
+            c = torch.as_tensor(
+                module.hyp_mlr.c,
+                dtype=feature_dist.dtype,
+                device=feature_dist.device)
+            radius = 1.0 / torch.sqrt(c)
+            feature_norm = feature_dist.detach().norm(dim=1)
+            radius_frac = feature_norm / radius
+            probs = logits.detach().exp()
+            entropy = -(probs * logits.detach()).sum(dim=1)
+            top_prob = probs.max(dim=1).values
+            anchor_norm = module.hyp_mlr.p_vals.detach().to(
+                feature_dist.device).norm(dim=1)
+            anchor_radius_frac = anchor_norm / radius
+            normal_norm = module.hyp_mlr.a_vals.detach().to(
+                feature_dist.device).norm(dim=1)
+            logit_std = logits.detach().std(dim=1)
+
+            loss_dict['hyperbolic_feature_norm_mean'] = float(feature_norm.mean().item())
+            loss_dict['hyperbolic_feature_radius_frac_mean'] = float(radius_frac.mean().item())
+            loss_dict['hyperbolic_feature_radius_frac_max'] = float(radius_frac.max().item())
+            loss_dict['hyperbolic_anchor_radius_frac_mean'] = float(anchor_radius_frac.mean().item())
+            loss_dict['hyperbolic_anchor_radius_frac_max'] = float(anchor_radius_frac.max().item())
+            loss_dict['hyperbolic_normal_norm_mean'] = float(normal_norm.mean().item())
+            loss_dict['hyperbolic_normal_norm_max'] = float(normal_norm.max().item())
+            loss_dict['hyperbolic_logit_std_mean'] = float(logit_std.mean().item())
+            loss_dict['hyperbolic_entropy_mean'] = float(entropy.mean().item())
+            loss_dict['hyperbolic_top_prob_mean'] = float(top_prob.mean().item())
+            tangent_stats = getattr(module.hyperbolic_linear, 'last_tangent_stats', {})
+            for name, value in tangent_stats.items():
+                loss_dict[f'hyperbolic_{name}'] = float(value.item())
 
     def update_early_stopping(self, val_loss_dict):
         if val_loss_dict is None or 'loss' not in val_loss_dict:
