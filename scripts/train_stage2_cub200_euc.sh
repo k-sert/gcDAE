@@ -20,7 +20,7 @@ cd ${SLURM_SUBMIT_DIR}/Stage2
 # TODO: Set to best Stage 1 checkpoint after Stage 1 training completes
 STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
 ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
-DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/cub200_euc
+DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/cub200_euc_${SLURM_JOB_ID}
 CC_PROJECT_NAME=train_stage2_cub200_euc
 
 srun python scripts/train.py \
