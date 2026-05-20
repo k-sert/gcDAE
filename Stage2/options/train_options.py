@@ -51,7 +51,7 @@ class TrainOptions:
         self.parser.add_argument(
             '--gamma', default=0.5, type=float, help='Gamma for learning rate decay')
         self.parser.add_argument(
-            '--optim_name', default='adamw', choices=['adamw'], type=str, help='Which optimizer to use')
+            '--optim_name', default='adamw', choices=['adamw', 'riemannian_adam'], type=str, help='Which optimizer to use')
         self.parser.add_argument('--train_decoder', default=False,
                                  type=bool, help='Whether to train the decoder model')
         self.parser.add_argument('--start_from_latent_avg', action='store_true',
@@ -62,6 +62,24 @@ class TrainOptions:
         self.parser.add_argument(
             "--c", default=1.0, type=float, help="Curvature of the Poincare ball (default: 0.1)",
         )
+        self.parser.add_argument(
+            '--hyperbolic_clip_radius_ratio', default=0.9, type=float,
+            help='For hyperbolic Stage II, clip Poincare-ball feature and class-anchor Euclidean norms to this fraction of the ball radius. Set <= 0 to disable.')
+        self.parser.add_argument(
+            '--hyperbolic_tangent_radius_ratio', default=0.7, type=float,
+            help='For hyperbolic Stage II, smoothly bound the Euclidean tangent feature before expmap0 so it maps to at most this Poincare radius fraction. Set <= 0 to disable.')
+        self.parser.add_argument(
+            '--disable_hyperbolic_input_norm', action='store_true',
+            help='Disable the stateless LayerNorm applied before the hyperbolic expmap projection.')
+        self.parser.add_argument(
+            '--hyperbolic_anchor_init_std', default=1e-2, type=float,
+            help='Tangent-space std used to initialize hyperbolic classifier anchor points before expmap0.')
+        self.parser.add_argument(
+            '--hyperbolic_normal_init_gain', default=5.0, type=float,
+            help='Multiplier applied to hyperbolic classifier normal initialization.')
+        self.parser.add_argument(
+            '--riemannian_stabilize_steps', default=10, type=int,
+            help='Projection/stabilization interval for Geoopt Riemannian optimizers. Set <= 0 to disable.')
         self.parser.add_argument(
             '--lpips_lambda', default=0.8, type=float, help='LPIPS loss multiplier factor')
         self.parser.add_argument(
