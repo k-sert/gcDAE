@@ -167,22 +167,47 @@ class HyperbolicGeometryHead:
         return logits, feature_dist, feature_euc
 
 
+def clip_tangent_norm(x, max_norm):
+    norm = x.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+    scale = (max_norm / norm).clamp(max=1.0)
+    return x * scale
+
+
 class SphericalPrototypeClassifier(nn.Module):
-    def __init__(self, ball_dim, n_classes, k):
+    def __init__(
+            self,
+            ball_dim,
+            n_classes,
+            k,
+            prototype_init_radius=1.0,
+            logit_scale_init=10.0):
         super(SphericalPrototypeClassifier, self).__init__()
         self.prototype_tangents = nn.Parameter(torch.Tensor(n_classes, ball_dim))
-        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(logit_scale_init)))
         self.k = k
         self.n_classes = n_classes
         self.ball_dim = ball_dim
+        self.prototype_init_radius = prototype_init_radius
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.normal_(self.prototype_tangents, mean=0.0, std=1e-2)
+        with torch.no_grad():
+            directions = torch.randn(
+                self.n_classes,
+                self.ball_dim,
+                device=self.prototype_tangents.device,
+                dtype=self.prototype_tangents.dtype)
+            directions = F.normalize(directions, dim=1)
+            self.prototype_tangents.copy_(
+                directions * self.prototype_init_radius)
 
     def get_prototypes(self, like):
         k = torch.as_tensor(self.k).type_as(like)
-        prototypes = gmath.expmap0(self.prototype_tangents.type_as(like), k=k)
+        max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
+        prototype_tangents = clip_tangent_norm(
+            self.prototype_tangents.type_as(like),
+            max_tangent_norm)
+        prototypes = gmath.expmap0(prototype_tangents, k=k)
         return gmath.project(prototypes, k=k)
 
     def forward(self, x):
@@ -202,6 +227,8 @@ class SphericalGeometryHead:
     def __call__(self, feature):
         tangent_feature = self.spherical_linear(feature)
         k = torch.as_tensor(self.k).type_as(tangent_feature)
+        max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
+        tangent_feature = clip_tangent_norm(tangent_feature, max_tangent_norm)
         feature_dist = gmath.expmap0(tangent_feature, k=k)
         feature_dist = gmath.project(feature_dist, k=k)
         return self.from_geometry(feature_dist)
@@ -277,15 +304,35 @@ class hae_clip(nn.Module):
         self.opts.hyperbolic = self.geometry == 'hyperbolic'
         print('Stage II geometry:', self.geometry)
         if self.geometry == 'hyperbolic':
+            hyperbolic_clip_radius_ratio = getattr(
+                self.opts, 'hyperbolic_clip_radius_ratio', 0.9)
+            if hyperbolic_clip_radius_ratio <= 0:
+                hyperbolic_clip_radius_ratio = None
+            hyperbolic_tangent_radius_ratio = getattr(
+                self.opts, 'hyperbolic_tangent_radius_ratio', 0.7)
+            if hyperbolic_tangent_radius_ratio <= 0:
+                hyperbolic_tangent_radius_ratio = None
+            hyperbolic_normalize_input = not getattr(
+                self.opts, 'disable_hyperbolic_input_norm', False)
             self.hyperbolic_linear = MobiusLinear(self.feature_shape,
                                                   self.feature_shape,
                                                   hyperbolic_input=False,
-                                                  hyperbolic_bias=True,
+                                                  hyperbolic_bias=False,
                                                   nonlin=None,
                                                   k=self.curvature,
+                                                  max_norm_ratio=hyperbolic_clip_radius_ratio,
+                                                  max_tangent_radius_ratio=hyperbolic_tangent_radius_ratio,
+                                                  normalize_input=hyperbolic_normalize_input,
                                                   )
             self.hyp_mlr = HyperbolicMLR(
-                ball_dim=self.feature_shape, n_classes=self.num_classes, c=self.curvature.abs())
+                ball_dim=self.feature_shape,
+                n_classes=self.num_classes,
+                c=self.curvature.abs(),
+                point_init_std=getattr(
+                    self.opts, 'hyperbolic_anchor_init_std', 1e-2),
+                normal_init_gain=getattr(
+                    self.opts, 'hyperbolic_normal_init_gain', 5.0),
+                max_point_norm_ratio=hyperbolic_clip_radius_ratio)
             self.geometry_head = HyperbolicGeometryHead(
                 self.hyperbolic_linear, self.hyp_mlr)
         elif self.geometry == 'euclidean':
