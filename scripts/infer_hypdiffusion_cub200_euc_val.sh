@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_h100
+#SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
 #SBATCH --job-name=hd_cub_euc_val
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=00:05:00
+#SBATCH --time=00:10:00
 #SBATCH --output=logs/hypdiffusion_cub200_euc_val_%A.out
 
 module purge
