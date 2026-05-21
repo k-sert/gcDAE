@@ -9,7 +9,7 @@ sys.path.append(".")
 from models.hyp_clip import hae_clip
 
 def run_test():
-    print("1. Setting up dummy options...")
+    print("1. Setting up options for HYPERBOLIC geometry...")
     opts = Namespace(
         encoder_version="",  
         encoder_type='none', 
@@ -17,18 +17,16 @@ def run_test():
         c=5.0,  
         dataset_type='caltech256_encode',
         transformer_layers=30,
-        geometry='spherical',
-        hyperbolic=False,
+        geometry='hyperbolic', # Changed to hyperbolic
+        hyperbolic=True,       # Switched to True
         checkpoint_path=None,
         psp_checkpoint_path=None
     )
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f"Using device: {device}")
 
-    print("2. Initializing the model (bypassing heavy IO & weights)...")
-    
-    # Monkeypatch BOTH encoder setup and weight loading to bypass disk files
+    print("2. Initializing the model...")
+    # Monkeypatch to bypass heavy IO
     original_set_encoder = hae_clip.set_encoder
     original_load_weights = hae_clip.load_weights
     
@@ -43,7 +41,6 @@ def run_test():
         print(f"Failed to initialize model: {e}")
         return
     finally:
-        # Restore original functionality
         hae_clip.set_encoder = original_set_encoder
         hae_clip.set_weights = original_load_weights
 
@@ -62,29 +59,24 @@ def run_test():
         
         print("\n✅ FORWARD PASS SUCCESSFUL!")
         print("-" * 40)
-        print(f"Logits shape (Classes)         : {logits.shape} -> Expected: ({batch_size}, 257)")
-        print(f"Spherical Manifold shape       : {feature_dist.shape} -> Expected: ({batch_size}, 512)")
-        print(f"Decoded Euclidean shape        : {feature_euc.shape} -> Expected: ({batch_size}, 1, 1024)")
+        print(f"Logits shape                 : {logits.shape}")
+        print(f"Hyperbolic Manifold shape    : {feature_dist.shape}")
+        print(f"Decoded Euclidean shape      : {feature_euc.shape}")
         
-        print("\n5. Checking Spherical Geometry Constraints...")
+        print("\n5. Checking Hyperbolic Geometry Constraints...")
         k = opts.c
-        expected_radius = 1.0 / math.sqrt(k)
+        max_radius = 1.0 / math.sqrt(k)
         actual_norms = feature_dist.norm(dim=-1)
         
-        print(f"Expected Sphere Radius         : {expected_radius:.4f}")
-        print(f"Actual feature norms           : {actual_norms.cpu().numpy()}")
+        print(f"Poincaré Ball Boundary Radius: {max_radius:.4f}")
+        print(f"Actual feature norms         : {actual_norms.cpu().numpy()}")
         
-        is_on_manifold = torch.allclose(actual_norms, torch.full_like(actual_norms, expected_radius), atol=1e-4)
-        if is_on_manifold:
-            print("🚀 SUCCESS: The features are correctly projected onto the sphere's surface!")
+        # Hyperbolic constraint: norms MUST be strictly less than the boundary radius
+        is_inside_ball = torch.all(actual_norms < max_radius)
+        if is_inside_ball:
+            print("🚀 SUCCESS: The features are safely contained inside the Poincaré ball!")
         else:
-            print("⚠️ WARNING: The features do not match the expected spherical radius.")
-
-        if torch.isnan(feature_dist).any():
-            print("❌ ERROR: NaN values detected!")
-        
-        logit_scale = model.geometry_head.classifier.logit_scale.exp().item()
-        print(f"Current Classifier Logit Scale : {logit_scale:.4f}")
+            print("⚠️ WARNING: Features escaped the Poincaré ball! (Norms exceeded max boundary)")
 
     except Exception as e:
         print(f"\n❌ Forward pass crashed!")
