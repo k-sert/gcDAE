@@ -42,7 +42,7 @@ class EncodeTransforms(TransformsConfig):
                         ]),
 			'transform_train': transforms.Compose([
 				transforms.RandomResizedCrop(size=(512, 512), scale=(0.2, 1.)),
-				transforms.RandomHorizontalFlip(0.5),
+				transforms.RandomHorizontalFlip(p=0.5),
 				transforms.RandomApply([
                                     transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
 				transforms.RandomGrayscale(p=0.2),
@@ -61,7 +61,7 @@ class FrontalizationTransforms(TransformsConfig):
 		transforms_dict = {
 			'transform_gt_train': transforms.Compose([
 				transforms.Resize((256, 256)),
-				transforms.RandomHorizontalFlip(0.5),
+				transforms.RandomHorizontalFlip(p=0.5),
 				transforms.ToTensor(),
 				transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]),
 			'transform_source': transforms.Compose([
