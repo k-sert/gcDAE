@@ -3,7 +3,7 @@ This file defines the core research contribution
 """
 from transformers import T5Tokenizer, T5EncoderModel, CLIPTokenizer, CLIPTextModel, CLIPVisionModel
 from configs.paths_config import model_paths
-from models.hyper_nets import MobiusLinear, HyperbolicMLR, LogisticRegression
+from models.hyper_nets import MobiusLinear, HyperbolicMLR, LogisticRegression, SphericalLinear
 import torch.nn.functional as F
 from torch import nn
 import torch
@@ -202,7 +202,7 @@ class SphericalPrototypeClassifier(nn.Module):
                 directions * self.prototype_init_radius)
 
     def get_prototypes(self, like):
-        k = torch.as_tensor(self.k).type_as(like)
+        k = torch.as_tensor(self.k, dtype=like.dtype, device=like.device)
         max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
         prototype_tangents = clip_tangent_norm(
             self.prototype_tangents.type_as(like),
@@ -226,7 +226,7 @@ class SphericalGeometryHead:
 
     def __call__(self, feature):
         tangent_feature = self.spherical_linear(feature)
-        k = torch.as_tensor(self.k).type_as(tangent_feature)
+        k = torch.as_tensor(self.k, dtype=tangent_feature.dtype, device=tangent_feature.device)
         max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
         tangent_feature = clip_tangent_norm(tangent_feature, max_tangent_norm)
         feature_dist = gmath.expmap0(tangent_feature, k=k)
@@ -342,8 +342,9 @@ class hae_clip(nn.Module):
                 n_inputs=self.feature_shape, n_outputs=self.num_classes)
             self.geometry_head = EuclideanGeometryHead(self.linear, self.euc_mlr)
         elif self.geometry == 'spherical':
-            self.spherical_linear = LogisticRegression(
-                self.feature_shape, self.feature_shape)
+            # Use the new layer instead of LogisticRegression
+            self.spherical_linear = SphericalLinear(
+                self.feature_shape, self.feature_shape, k=self.spherical_curvature)
             self.spherical_classifier = SphericalPrototypeClassifier(
                 ball_dim=self.feature_shape,
                 n_classes=self.num_classes,
@@ -430,24 +431,32 @@ class hae_clip(nn.Module):
             feature = self.transformer_encoder(ocodes)
             feature = self.linear_encoder(feature)
             feature_reshape = torch.flatten(feature, start_dim=1)
+            
+            # Project to manifold for the head
+            if self.geometry == 'spherical':
+                feature_input = gmath.expmap0(feature_reshape, k=self.spherical_curvature)
+            else:
+                feature_input = feature_reshape
 
+            logits, feature_dist, feature_euc = self.geometry_head(feature_input)
         else:
             feature_dist = x
             ocodes = None
-            # codes = self.encoder(y)
 
-        if input_feature:
-            logits, feature_dist, feature_euc = self.geometry_head.from_geometry(feature_dist)
+        # Prepare feature for decoder
+        # If spherical, we must map back to tangent space for the Euclidean decoder
+        if self.geometry == 'spherical':
+            # Use logmap0 to get the tangent vector for the decoder
+            decoder_input = gmath.logmap0(feature_dist, k=self.spherical_curvature)
         else:
-            logits, feature_dist, feature_euc = self.geometry_head(feature_reshape)
+            # For hyperbolic/Euclidean, feature_euc is already what the decoder expects
+            decoder_input = feature_euc
 
-        feature_euc = feature_euc.unsqueeze(1)
-        feature_euc = self.linear_decoder(feature_euc)
+        decoder_input = decoder_input.unsqueeze(1)
+        feature_euc = self.linear_decoder(decoder_input)
         feature_euc = self.transformer_decoder(feature_euc)
         codes = feature_euc
 
-
         return logits, feature_dist, ocodes, feature_euc
-
     def set_opts(self, opts):
         self.opts = opts

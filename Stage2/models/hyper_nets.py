@@ -315,6 +315,22 @@ class MobiusLinear(torch.nn.Linear):
 
     
 
+class SphericalLinear(torch.nn.Module):
+    def __init__(self, in_features, out_features, k=1.0):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.k = torch.tensor(k)
+        self.weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
+        self.bias = torch.nn.Parameter(torch.Tensor(out_features))
+        torch.nn.init.xavier_uniform_(self.weight)
+        torch.nn.init.zeros_(self.bias)
+
+    def forward(self, x):
+        # x is Euclidean; map to tangent space, then project
+        k = self.k.type_as(x)
+        x_tangent = torch.F.linear(x, self.weight, self.bias)
+        return gmath.expmap0(x_tangent, k=k)
 
 class MobiusDist2Hyperplane(torch.nn.Module):
     def __init__(self, in_features, out_features, k=-1.0, fp64_hyper=True):
