@@ -18,8 +18,9 @@ import matplotlib
 def get_keys(d, name):
     if 'state_dict' in d:
         d = d['state_dict']
-    d_filt = {k[len(name) + 1:]: v for k, v in d.items()
-              if k[:len(name)] == name}
+    prefix = name + '.'
+    d_filt = {k[len(prefix):]: v for k, v in d.items()
+              if k.startswith(prefix)}
     return d_filt
 
 
