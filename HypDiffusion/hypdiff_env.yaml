@@ -1,4 +1,4 @@
-name: hypdae_env
+name: hypdiff_env
 channels:
   - defaults
 dependencies:
