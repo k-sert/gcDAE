@@ -329,7 +329,7 @@ class SphericalLinear(torch.nn.Module):
     def forward(self, x):
         # x is Euclidean; map to tangent space, then project
         k = self.k.type_as(x)
-        x_tangent = torch.F.linear(x, self.weight, self.bias)
+        x_tangent = torch.nn.functional.F.linear(x, self.weight, self.bias)
         return gmath.expmap0(x_tangent, k=k)
 
 class MobiusDist2Hyperplane(torch.nn.Module):
