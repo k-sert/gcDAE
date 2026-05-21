@@ -325,7 +325,7 @@ class MobiusDist2Hyperplane(torch.nn.Module):
         self.ball = ball = geoopt.PoincareBall(c=k.abs())
         self.sphere = sphere = geoopt.manifolds.Sphere()
         self.scale = torch.nn.Parameter(torch.zeros(out_features))
-        point = torch.randn(out_features, in_features) / 4
+        point = torch.randn(out_features, in_features) / math.sqrt(in_features)
         point = gmath.expmap0(point, k=k)
         tangent = torch.randn(out_features, in_features)
         self.point = geoopt.ManifoldParameter(point, manifold=ball)
