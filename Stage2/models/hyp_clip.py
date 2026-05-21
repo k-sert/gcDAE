@@ -225,20 +225,22 @@ class SphericalGeometryHead:
         self.k = k
 
     def __call__(self, feature):
-        tangent_feature = self.spherical_linear(feature)
-        k = torch.as_tensor(self.k, dtype=tangent_feature.dtype, device=tangent_feature.device)
-        max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
-        tangent_feature = clip_tangent_norm(tangent_feature, max_tangent_norm)
-        feature_dist = gmath.expmap0(tangent_feature, k=k)
+        # Feature maps from Euclidean to Spherical directly inside the layer
+        feature_dist = self.spherical_linear(feature)
+        
+        # Project to ensure floating point precision keeps it strictly on the sphere
+        k = torch.as_tensor(self.k, dtype=feature_dist.dtype, device=feature_dist.device)
         feature_dist = gmath.project(feature_dist, k=k)
+        
         return self.from_geometry(feature_dist)
 
     def from_geometry(self, feature_dist):
         k = torch.as_tensor(self.k).type_as(feature_dist)
         logits = F.log_softmax(self.classifier(feature_dist), dim=-1)
+        
+        # Project back to Euclidean space using the logarithmic map for the decoder
         feature_euc = gmath.logmap0(feature_dist, k=k)
         return logits, feature_dist, feature_euc
-
 
 class hae_clip(nn.Module):
 
@@ -432,27 +434,15 @@ class hae_clip(nn.Module):
             feature = self.linear_encoder(feature)
             feature_reshape = torch.flatten(feature, start_dim=1)
             
-            # Project to manifold for the head
-            if self.geometry == 'spherical':
-                feature_input = gmath.expmap0(feature_reshape, k=self.spherical_curvature)
-            else:
-                feature_input = feature_reshape
-
-            logits, feature_dist, feature_euc = self.geometry_head(feature_input)
+            # The geometry head cleanly handles all manifold mapping internally
+            logits, feature_dist, feature_euc = self.geometry_head(feature_reshape)
         else:
             feature_dist = x
             ocodes = None
+            logits, feature_dist, feature_euc = self.geometry_head.from_geometry(feature_dist)
 
-        # Prepare feature for decoder
-        # If spherical, we must map back to tangent space for the Euclidean decoder
-        if self.geometry == 'spherical':
-            # Use logmap0 to get the tangent vector for the decoder
-            decoder_input = gmath.logmap0(feature_dist, k=self.spherical_curvature)
-        else:
-            # For hyperbolic/Euclidean, feature_euc is already what the decoder expects
-            decoder_input = feature_euc
-
-        decoder_input = decoder_input.unsqueeze(1)
+        # feature_euc is already flattened back to Euclidean space by geometry_head
+        decoder_input = feature_euc.unsqueeze(1)
         feature_euc = self.linear_decoder(decoder_input)
         feature_euc = self.transformer_decoder(feature_euc)
         codes = feature_euc
