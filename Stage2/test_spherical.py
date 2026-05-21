@@ -10,12 +10,11 @@ from models.hyp_clip import hae_clip
 
 def run_test():
     print("1. Setting up dummy options...")
-    # These match the flags from your bash script
     opts = Namespace(
-        encoder_version="/data2/mhf/DXL/Lingxiao/Cache/huggingface/hub/models--openai--clip-vit-large-patch14",
-        encoder_type='CLIPImageEmbedder',
+        encoder_version="",  # Bypassed
+        encoder_type='none', # Changed to bypass Hugging Face check
         feature_size=512,
-        c=5.0,  # Using the curvature value from your bash script
+        c=5.0,  
         dataset_type='caltech256_encode',
         transformer_layers=30,
         geometry='spherical',
@@ -27,7 +26,12 @@ def run_test():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
-    print("2. Initializing the model...")
+    print("2. Initializing the model (bypassing raw CLIP encoder)...")
+    
+    # Temporarily monkeypatch set_encoder to avoid loading the missing hub path
+    original_set_encoder = hae_clip.set_encoder
+    hae_clip.set_encoder = lambda self, version: torch.nn.Identity()
+    
     try:
         model = hae_clip(opts).to(device)
         model.eval()
@@ -35,17 +39,16 @@ def run_test():
     except Exception as e:
         print(f"Failed to initialize model: {e}")
         return
+    finally:
+        hae_clip.set_encoder = original_set_encoder
 
     print("\n3. Creating dummy input...")
-    # To make the test instant, we bypass the raw CLIP image encoder 
-    # and feed the intermediate latent code directly.
     batch_size = 4
     dummy_code = torch.randn(batch_size, 1, 1024).to(device)
 
     print("\n4. Running Forward Pass...")
     try:
         with torch.no_grad():
-            # input_code=True allows us to skip raw image loading for the test
             logits, feature_dist, ocodes, feature_euc = model(
                 dummy_code, 
                 batch_size=batch_size, 
@@ -59,8 +62,6 @@ def run_test():
         print(f"Decoded Euclidean shape        : {feature_euc.shape} -> Expected: ({batch_size}, 1, 1024)")
         
         print("\n5. Checking Spherical Geometry Constraints...")
-        # For a sphere with curvature k (c), the radius is R = 1 / sqrt(c). 
-        # By definition, the L2 norm of the points on the manifold should equal this radius.
         k = opts.c
         expected_radius = 1.0 / math.sqrt(k)
         actual_norms = feature_dist.norm(dim=-1)
@@ -68,7 +69,6 @@ def run_test():
         print(f"Expected Sphere Radius         : {expected_radius:.4f}")
         print(f"Actual feature norms           : {actual_norms.cpu().numpy()}")
         
-        # Check if the points actually land on the sphere surface (within a small float tolerance)
         is_on_manifold = torch.allclose(actual_norms, torch.full_like(actual_norms, expected_radius), atol=1e-4)
         if is_on_manifold:
             print("🚀 SUCCESS: The features are correctly projected onto the sphere's surface!")
@@ -76,7 +76,7 @@ def run_test():
             print("⚠️ WARNING: The features do not match the expected spherical radius.")
 
         if torch.isnan(feature_dist).any():
-            print("❌ ERROR: NaN values detected! Curvature 'c' might be too high causing math overflow.")
+            print("❌ ERROR: NaN values detected!")
         
         logit_scale = model.geometry_head.classifier.logit_scale.exp().item()
         print(f"Current Classifier Logit Scale : {logit_scale:.4f}")
