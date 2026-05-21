@@ -11,8 +11,8 @@ from models.hyp_clip import hae_clip
 def run_test():
     print("1. Setting up dummy options...")
     opts = Namespace(
-        encoder_version="",  # Bypassed
-        encoder_type='none', # Changed to bypass Hugging Face check
+        encoder_version="",  
+        encoder_type='none', 
         feature_size=512,
         c=5.0,  
         dataset_type='caltech256_encode',
@@ -26,11 +26,14 @@ def run_test():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
-    print("2. Initializing the model (bypassing raw CLIP encoder)...")
+    print("2. Initializing the model (bypassing heavy IO & weights)...")
     
-    # Temporarily monkeypatch set_encoder to avoid loading the missing hub path
+    # Monkeypatch BOTH encoder setup and weight loading to bypass disk files
     original_set_encoder = hae_clip.set_encoder
+    original_load_weights = hae_clip.load_weights
+    
     hae_clip.set_encoder = lambda self, version: torch.nn.Identity()
+    hae_clip.load_weights = lambda self: print("-> Weights initialization bypassed for testing")
     
     try:
         model = hae_clip(opts).to(device)
@@ -40,7 +43,9 @@ def run_test():
         print(f"Failed to initialize model: {e}")
         return
     finally:
+        # Restore original functionality
         hae_clip.set_encoder = original_set_encoder
+        hae_clip.set_weights = original_load_weights
 
     print("\n3. Creating dummy input...")
     batch_size = 4
