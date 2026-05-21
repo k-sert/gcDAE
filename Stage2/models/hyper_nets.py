@@ -325,7 +325,11 @@ class MobiusDist2Hyperplane(torch.nn.Module):
         self.ball = ball = geoopt.PoincareBall(c=k.abs())
         self.sphere = sphere = geoopt.manifolds.Sphere()
         self.scale = torch.nn.Parameter(torch.zeros(out_features))
+        
+        # ~~~ FIX: Scaled initialization for deep features ~~~
         point = torch.randn(out_features, in_features) / math.sqrt(in_features)
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
         point = gmath.expmap0(point, k=k)
         tangent = torch.randn(out_features, in_features)
         self.point = geoopt.ManifoldParameter(point, manifold=ball)
@@ -338,13 +342,13 @@ class MobiusDist2Hyperplane(torch.nn.Module):
             input = input.double()
         else:
             input = input.float()
-        with autocast(enabled=False):  # Do not use fp16
+        with autocast(enabled=False):  # Do not use fp16 for precise geometry
             input = input.unsqueeze(-2)
             distance = gmath.dist2plane(
                 x=input, p=self.point, a=self.tangent, k=self.ball.c, signed=True
             )
             return distance * self.scale.exp()
-
+        
     def extra_repr(self):
         return (
             "in_features={in_features}, out_features={out_features}"

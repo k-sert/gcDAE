@@ -305,31 +305,41 @@ class Coach:
                     f'Optimizer setup for {self.opts.geometry} geometry is not implemented yet.')
         else:
             params = list(self.net.module.transformer_encoder.parameters())
-            
-        # params = list(self.net.module.transformer_decoder.parameters())
-        if self.opts.optim_name == 'adamw':
-            if self.opts.geometry == 'hyperbolic':
+
+        manifold_params = []
+        euclidean_params = []
+        for p in params:
+            if isinstance(p, geoopt.ManifoldParameter):
+                manifold_params.append(p)
+            else:
+                euclidean_params.append(p)
+
+        # Dynamic fallback for learning rate variable naming conventions
+        base_lr = getattr(self.opts, 'learning_rate', getattr(self.opts, 'lr', 0.001))
+        manifold_lr = getattr(self.opts, 'lr_manifold', base_lr * 10.0)
+
+        if self.opts.optim_name in ['adamw', 'riemannian_adam']:
+            # Force RiemannianAdam if non-Euclidean parameters are present
+            if self.opts.geometry in ['hyperbolic', 'spherical'] or len(manifold_params) > 0:
                 stabilize = getattr(self.opts, 'riemannian_stabilize_steps', 10)
                 stabilize = None if stabilize <= 0 else int(stabilize)
                 print(
-                    'using geoopt RiemannianAdam for hyperbolic geometry '
-                    f'(lr={self.opts.learning_rate}, stabilize={stabilize})'
+                    f'Using geoopt RiemannianAdam for {self.opts.geometry} geometry. '
+                    f'Base LR: {base_lr}, Manifold LR: {manifold_lr}, Stabilize: {stabilize}'
                 )
-                optimizer = geoopt.optim.RiemannianAdam(
-                    params, lr=self.opts.learning_rate, stabilize=stabilize)
+                optimizer = geoopt.optim.RiemannianAdam([
+                    {'params': euclidean_params, 'lr': base_lr},
+                    {'params': manifold_params, 'lr': manifold_lr}
+                ], stabilize=stabilize)
             else:
-                optimizer = torch.optim.AdamW(params, lr=self.opts.learning_rate)
-            scheduler = StepLR(optimizer, step_size=self.opts.step_size, gamma=self.opts.gamma)
-        elif self.opts.optim_name == 'riemannian_adam':
-            stabilize = getattr(self.opts, 'riemannian_stabilize_steps', 10)
-            stabilize = None if stabilize <= 0 else int(stabilize)
-            optimizer = geoopt.optim.RiemannianAdam(
-                params, lr=self.opts.learning_rate, stabilize=stabilize)
+                print(f'Using standard AdamW for Euclidean optimization (LR: {base_lr})')
+                optimizer = torch.optim.AdamW(params, lr=base_lr)
+                
             scheduler = StepLR(optimizer, step_size=self.opts.step_size, gamma=self.opts.gamma)
         else:
             raise ValueError(f'Unsupported optimizer: {self.opts.optim_name}')
+            
         return optimizer, scheduler
-
     def configure_datasets(self):
         # print(transforms_dict)
         train_dataset = ImagesDataset(self.opts.dataset_type, split='train')
