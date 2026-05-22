@@ -36,11 +36,11 @@ srun python scripts/train.py \
     --feature_size=512 \
     --transformer_layers=30 \
     --train_all \
-    --learning_rate=0.001 \
-    --step_size=5000 \
+    --learning_rate=0.0001 \
+    --step_size=1000 \
     --gamma=0.5 \
     --optim_name=adamw \
-    --batch_size=256 \
+    --batch_size=128 \
     --test_batch_size=64 \
     --workers=8 \
     --test_workers=4 \
@@ -48,7 +48,7 @@ srun python scripts/train.py \
     --save_interval=5000 \
     --board_interval=50 \
     --val_interval=1000 \
-    --early_stop_patience=20 \
+    --early_stop_patience=5 \
     --early_stop_min_delta=0.0001 \
     --geometry_lambda=1.0 \
     --reverse_lambda=0.1 \
