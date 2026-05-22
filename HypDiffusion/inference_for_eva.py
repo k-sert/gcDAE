@@ -1,4 +1,5 @@
 from json import load
+import atexit
 import geoopt.manifolds.stereographic.math as gmath
 from notebook_utils.pmath import *
 from ldm.models.diffusion.dpm_solver_org import DPMSolverSampler
@@ -29,6 +30,101 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # local path for importing data_configs and paths_config
 
 # we utilize geoopt package for hyperbolic calculation
+
+
+def start_codecarbon_tracking(opt):
+    if not getattr(opt, 'use_codecarbon', False):
+        return None
+
+    try:
+        from codecarbon import EmissionsTracker
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "CodeCarbon tracking is enabled, but the 'codecarbon' package "
+            "is not installed in this environment. Install it or disable "
+            "--use_codecarbon."
+        ) from exc
+
+    output_dir = opt.codecarbon_output_dir
+    if output_dir is None:
+        output_dir = os.path.join(opt.outdir, 'codecarbon')
+    os.makedirs(output_dir, exist_ok=True)
+
+    tracker_args = {
+        'project_name': opt.codecarbon_project_name,
+        'output_dir': output_dir,
+        'measure_power_secs': opt.codecarbon_measure_power_secs,
+        'save_to_file': True,
+        'log_level': 'warning',
+    }
+    tracker = EmissionsTracker(**tracker_args)
+    state = {
+        'tracker': tracker,
+        'output_dir': output_dir,
+        'output_file': tracker_args.get('output_file', 'emissions.csv'),
+        'start_time': time.time(),
+        'last_log_time': time.time(),
+        'stopped': False,
+    }
+    tracker.start()
+    print(
+        "CodeCarbon tracking started. "
+        f"Sampling every {opt.codecarbon_measure_power_secs}s. "
+        f"Results: {os.path.join(output_dir, state['output_file'])}"
+    )
+    atexit.register(stop_codecarbon_tracking, state)
+    return state
+
+
+def log_codecarbon_status(opt, state):
+    if state is None or state.get('stopped'):
+        return
+    if not getattr(opt, 'codecarbon_log_every_n_secs', 0):
+        return
+
+    now = time.time()
+    if now - state['last_log_time'] < opt.codecarbon_log_every_n_secs:
+        return
+
+    elapsed_mins = (now - state['start_time']) / 60.0
+    state['last_log_time'] = now
+    print(
+        "CodeCarbon tracking active "
+        f"({elapsed_mins:.1f} min elapsed). "
+        f"Final results will be written to {os.path.join(state['output_dir'], state['output_file'])}"
+    )
+
+
+def stop_codecarbon_tracking(state):
+    if state is None or state.get('stopped'):
+        return
+
+    tracker = state['tracker']
+    emissions = tracker.stop()
+    final_data = getattr(tracker, 'final_emissions_data', None)
+    state['stopped'] = True
+    if emissions is not None:
+        print(f"CodeCarbon emissions: {emissions:.6f} kg CO2eq")
+    if final_data is not None:
+        duration = getattr(final_data, 'duration', None)
+        energy = getattr(final_data, 'energy_consumed', None)
+        gpu_energy = getattr(final_data, 'gpu_energy', None)
+        cpu_energy = getattr(final_data, 'cpu_energy', None)
+        summary = []
+        if duration is not None:
+            summary.append(f"duration={duration / 60.0:.2f} min")
+        if energy is not None:
+            summary.append(f"energy={energy:.6f} kWh")
+        if gpu_energy is not None:
+            summary.append(f"gpu_energy={gpu_energy:.6f} kWh")
+        if cpu_energy is not None:
+            summary.append(f"cpu_energy={cpu_energy:.6f} kWh")
+        if summary:
+            print("CodeCarbon summary: " + ", ".join(summary))
+    print(
+        f"CodeCarbon results saved to {os.path.join(state['output_dir'], state['output_file'])}"
+    )
+
 
 def chunk(it, size):
     it = iter(it)
@@ -554,7 +650,7 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=23,
         help="the seed (for reproducible sampling)",
     )
     parser.add_argument(
@@ -563,6 +659,35 @@ def main():
         help="evaluate at this precision",
         choices=["full", "autocast"],
         default="autocast"
+    )
+    parser.add_argument(
+        "--use_codecarbon",
+        action="store_true",
+        help="Whether to track energy/emissions with CodeCarbon.",
+    )
+    parser.add_argument(
+        "--codecarbon_project_name",
+        default="hypdiffusion_inference",
+        type=str,
+        help="CodeCarbon project name.",
+    )
+    parser.add_argument(
+        "--codecarbon_output_dir",
+        default=None,
+        type=str,
+        help="Directory for CodeCarbon outputs. Defaults to outdir/codecarbon.",
+    )
+    parser.add_argument(
+        "--codecarbon_measure_power_secs",
+        default=30,
+        type=int,
+        help="CodeCarbon power sampling interval in seconds.",
+    )
+    parser.add_argument(
+        "--codecarbon_log_every_n_secs",
+        default=300,
+        type=int,
+        help="How often to print CodeCarbon progress messages.",
     )
     
 
@@ -574,7 +699,14 @@ def main():
     seed = opt.seed
     precision = opt.precision
 
-    # seed_everything(seed)
+    seed_everything(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    codecarbon_state = start_codecarbon_tracking(opt)
 
     config = OmegaConf.load(f"{config_path}")
     model = load_model_from_config(config, f"{ckpt}")
@@ -719,11 +851,13 @@ def main():
                 
         count_class += 1
         print('finish {}/{} class'.format(count_class, n_classes))
+        log_codecarbon_status(opt, codecarbon_state)
         if count_class == n_classes:
             break
     print('Saved images to {}'.format(outdir))
     print(f"Your samples are ready and waiting for you \n"
         f" \nEnjoy.")
+    stop_codecarbon_tracking(codecarbon_state)
 
 if __name__ == "__main__":
     main()
