@@ -586,6 +586,15 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
         return encoder
 
     def load_weights(self):
+        def load_clip_encoder_state(encoder_state):
+            position_ids_key = 'transformer.vision_model.embeddings.position_ids'
+            current_encoder_state = self.encoder.state_dict()
+            if position_ids_key in current_encoder_state:
+                encoder_state[position_ids_key] = current_encoder_state[position_ids_key]
+            else:
+                encoder_state.pop(position_ids_key, None)
+            self.encoder.load_state_dict(encoder_state, strict=True)
+
         if self.opts.s2_checkpoint_path is not None:
             print('Loading HAE from checkpoint: {}'.format(
                 self.opts.s2_checkpoint_path))
@@ -631,8 +640,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 new_state_dict_clip[name] = v
             ckpt_clip['state_dict'] = new_state_dict_clip
             encoder_state = get_keys(ckpt_clip, 'cond_stage_model')
-            encoder_state.pop('transformer.vision_model.embeddings.position_ids', None)
-            self.encoder.load_state_dict(encoder_state, strict=True)
+            load_clip_encoder_state(encoder_state)
         else:
             print('Initializing hyperediting from scratch')
             ckpt = torch.load(self.opts.s1_checkpoint_path,
@@ -644,8 +652,7 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 new_state_dict[name] = v
             ckpt['state_dict'] = new_state_dict
             encoder_state = get_keys(ckpt, 'cond_stage_model')
-            encoder_state.pop('transformer.vision_model.embeddings.position_ids', None)
-            self.encoder.load_state_dict(encoder_state, strict=True)
+            load_clip_encoder_state(encoder_state)
 
     def forward(self, x, y=None, batch_size=4, resize=True, latent_mask=None, input_code=False,
                 inject_latent=None, return_latents=False, alpha=None, input_feature=False):
