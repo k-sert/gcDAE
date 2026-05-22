@@ -48,7 +48,7 @@ srun python scripts/train.py \
     --save_interval=5000 \
     --board_interval=50 \
     --val_interval=1000 \
-    --early_stop_patience=20 \
+    --early_stop_patience=5 \
     --early_stop_min_delta=0.0001 \
     --geometry_lambda=1.0 \
     --reverse_lambda=0.1 \
