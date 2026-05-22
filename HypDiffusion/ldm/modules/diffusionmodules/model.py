@@ -1,5 +1,6 @@
 # pytorch_diffusion + derived encoder decoder
 import math
+import os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -279,7 +280,8 @@ class MemoryEfficientCrossAttentionWrapper(MemoryEfficientCrossAttention):
 
 def make_attn(in_channels, attn_type="vanilla", attn_kwargs=None):
     assert attn_type in ["vanilla", "vanilla-xformers", "memory-efficient-cross-attn", "linear", "none"], f'attn_type {attn_type} unknown'
-    if XFORMERS_IS_AVAILBLE and attn_type == "vanilla":
+    use_xformers = os.environ.get("HYPDIFFUSION_USE_XFORMERS", "0") == "1"
+    if use_xformers and XFORMERS_IS_AVAILBLE and attn_type == "vanilla":
         attn_type = "vanilla-xformers"
     print(f"making attention of type '{attn_type}' with {in_channels} in_channels")
     if attn_type == "vanilla":
