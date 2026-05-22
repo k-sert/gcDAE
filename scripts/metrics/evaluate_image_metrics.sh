@@ -32,10 +32,13 @@ OUT_JSON="$3"
 LPIPS_MODE=${LPIPS_MODE:-paired}
 LPIPS_MAX_PAIRS_PER_CLASS=${LPIPS_MAX_PAIRS_PER_CLASS:-1000}
 LPIPS_SEED=${LPIPS_SEED:-23}
+RUN_CODECARBON=${RUN_CODECARBON:-0}
+CODECARBON_PROJECT_NAME=${CODECARBON_PROJECT_NAME:-evaluate_image_metrics}
+CODECARBON_OUTPUT_DIR=${CODECARBON_OUTPUT_DIR:-/scratch-shared/scur0164/outputs/codecarbon/metrics/${SLURM_JOB_ID}}
 
 cd "${SLURM_SUBMIT_DIR}"
 
-python scripts/metrics/evaluate_image_metrics.py \
+CMD=(python scripts/metrics/evaluate_image_metrics.py \
     --generated "${GENERATED_DIR}" \
     --reference "${REFERENCE_DIR}" \
     --out "${OUT_JSON}" \
@@ -44,4 +47,13 @@ python scripts/metrics/evaluate_image_metrics.py \
     --cache_root "${FIDELITY_CACHE}" \
     --lpips_mode "${LPIPS_MODE}" \
     --lpips_max_pairs_per_class "${LPIPS_MAX_PAIRS_PER_CLASS}" \
-    --lpips_seed "${LPIPS_SEED}"
+    --lpips_seed "${LPIPS_SEED}")
+
+if [ "${RUN_CODECARBON}" = "1" ]; then
+    python scripts/run_with_codecarbon.py \
+        --project-name "${CODECARBON_PROJECT_NAME}" \
+        --output-dir "${CODECARBON_OUTPUT_DIR}" \
+        -- "${CMD[@]}"
+else
+    "${CMD[@]}"
+fi
