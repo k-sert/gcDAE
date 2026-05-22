@@ -4,7 +4,7 @@ from torch.utils.checkpoint import checkpoint
 import torch.nn.functional as F
 
 from transformers import T5Tokenizer, T5EncoderModel, CLIPTokenizer, CLIPTextModel, CLIPVisionModel
-from .hyper_nets import MobiusLinear, HyperbolicMLR, LogisticRegression
+from .hyper_nets import MobiusLinear, HyperbolicMLR, LogisticRegression, SphericalLinear
 import open_clip
 from ldm.util import default, count_params
 import einops
@@ -562,8 +562,12 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
             self.euc_mlr = LogisticRegression(
                 n_inputs=self.feature_shape, n_outputs=self.num_classes)
         elif self.geometry == 'spherical':
-            self.spherical_linear = LogisticRegression(
-                self.feature_shape, self.feature_shape)
+            self.spherical_linear = SphericalLinear(
+                self.feature_shape,
+                self.feature_shape,
+                k=self.spherical_curvature,
+                normalize_input=True,
+                max_tangent_radius_ratio=0.7)
             self.spherical_classifier = SphericalPrototypeClassifier(
                 ball_dim=self.feature_shape,
                 n_classes=self.num_classes,
@@ -626,9 +630,9 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 name = k.replace('.module', '')
                 new_state_dict_clip[name] = v
             ckpt_clip['state_dict'] = new_state_dict_clip
-            self.encoder.load_state_dict(
-                get_keys(ckpt_clip, 'cond_stage_model'), strict=True)
-            # self.encoder.load_state_dict(get_keys(ckpt, 'encoder'), strict=True)
+            encoder_state = get_keys(ckpt_clip, 'cond_stage_model')
+            encoder_state.pop('transformer.vision_model.embeddings.position_ids', None)
+            self.encoder.load_state_dict(encoder_state, strict=True)
         else:
             print('Initializing hyperediting from scratch')
             ckpt = torch.load(self.opts.s1_checkpoint_path,
@@ -639,8 +643,9 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
                 name = k.replace('.module', '')
                 new_state_dict[name] = v
             ckpt['state_dict'] = new_state_dict
-            self.encoder.load_state_dict(
-                get_keys(ckpt, 'cond_stage_model'), strict=True)
+            encoder_state = get_keys(ckpt, 'cond_stage_model')
+            encoder_state.pop('transformer.vision_model.embeddings.position_ids', None)
+            self.encoder.load_state_dict(encoder_state, strict=True)
 
     def forward(self, x, y=None, batch_size=4, resize=True, latent_mask=None, input_code=False,
                 inject_latent=None, return_latents=False, alpha=None, input_feature=False):
@@ -662,16 +667,12 @@ class HyperbolicCLIPImageEmbedder(AbstractEncoder):
             elif self.geometry == 'euclidean':
                 feature_dist = self.linear(feature_reshape)
             elif self.geometry == 'spherical':
-                tangent_feature = self.spherical_linear(feature_reshape)
-                k = torch.as_tensor(self.spherical_curvature).type_as(tangent_feature)
-                max_tangent_norm = 0.9 * math.pi / (2.0 * torch.sqrt(k))
-                tangent_feature = clip_tangent_norm(tangent_feature, max_tangent_norm)
-                feature_dist = gmath.expmap0(tangent_feature, k=k)
+                feature_dist = self.spherical_linear(feature_reshape)
+                k = torch.as_tensor(self.spherical_curvature).type_as(feature_dist)
                 feature_dist = gmath.project(feature_dist, k=k)
             else:
                 raise NotImplementedError(
                     f'Forward pass for {self.geometry} geometry is not implemented yet.')
-
         else:
             ocodes = None
             feature = None
