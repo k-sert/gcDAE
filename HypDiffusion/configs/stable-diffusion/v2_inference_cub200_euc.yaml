@@ -63,8 +63,7 @@ model:
           transformer_layers: 30
           dataset_type: cub200_encode
           geometry: euclidean
-          c: 1
+          c: 0
           sample_mode: False
           s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
-          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_euc/checkpoints/best_model.pt
-
+          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_euc_23037991/checkpoints/best_model.pt

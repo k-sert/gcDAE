@@ -66,5 +66,4 @@ model:
           c: 1
           sample_mode: False
           s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
-          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c1/checkpoints/best_model.pt
-
+          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_sph_c1_23036780/checkpoints/best_model.pt
