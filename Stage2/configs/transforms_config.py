@@ -20,53 +20,53 @@ class EncodeTransforms(TransformsConfig):
 	def __init__(self, opts=None):
 		super(EncodeTransforms, self).__init__(opts)
 
-def get_transforms(self):
+	def get_transforms(self):
         # Make sure to import this at the top of your dataset file:
         # from albumentations.pytorch import ToTensorV2
         # import albumentations as A
 
-        transforms_dict = {
-            'transform_gt_train': A.Compose([
-                A.Resize(height=512, width=512),  # Fixed typo: 'wi dth' -> 'width'
-                A.HorizontalFlip(p=0.5),
-                A.Rotate(limit=20),
-                A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-                ToTensorV2(),
-            ]),
-            'transform_source': A.Compose([
-                A.Resize(height=224, width=224),
-                A.HorizontalFlip(p=0.5),
-                A.Rotate(limit=20),
-                A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-                ToTensorV2(),
-            ]),
-            'transform_gt_test': A.Compose([
-                A.Resize(height=512, width=512),
-                A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-                ToTensorV2(),
-            ]),
-            'transform_test': A.Compose([
-                A.Resize(height=224, width=224),
-                A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-                ToTensorV2(),
-            ]),
-            'transform_inference': A.Compose([
-                A.Resize(height=224, width=224),
-                A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-                ToTensorV2(),
-            ]),
-            'transform_train': transforms.Compose([
-                transforms.RandomResizedCrop(size=(512, 512), scale=(0.2, 1.0)),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomApply([
-                    transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-                ], p=0.8),
-                transforms.RandomGrayscale(p=0.2),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-            ])
-        }
-        return transforms_dict
+		transforms_dict = {
+			'transform_gt_train': A.Compose([
+				A.Resize(height=512, width=512),
+				A.HorizontalFlip(p=0.5),
+				A.Rotate(limit=20),
+				A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+				ToTensorV2(),
+			]),
+			'transform_source': A.Compose([
+				A.Resize(height=224, width=224),
+				A.HorizontalFlip(p=0.5),
+				A.Rotate(limit=20),
+				A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+				ToTensorV2(),
+			]),
+			'transform_gt_test': A.Compose([
+				A.Resize(height=512, width=512),
+				A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+				ToTensorV2(),
+			]),
+			'transform_test': A.Compose([
+				A.Resize(height=224, width=224),
+				A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+				ToTensorV2(),
+			]),
+			'transform_inference': A.Compose([
+				A.Resize(height=224, width=224),
+				A.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+				ToTensorV2(),
+			]),
+			'transform_train': transforms.Compose([
+				transforms.RandomResizedCrop(size=(512, 512), scale=(0.2, 1.0)),
+				transforms.RandomHorizontalFlip(p=0.5),
+				transforms.RandomApply([
+					transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+				], p=0.8),
+				transforms.RandomGrayscale(p=0.2),
+				transforms.ToTensor(),
+				transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+			])
+		}
+		return transforms_dict
 
 class FrontalizationTransforms(TransformsConfig):
 
