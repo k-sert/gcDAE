@@ -418,8 +418,9 @@ class hae_clip(nn.Module):
                 name = k.replace('.module', '')
                 new_state_dict[name] = v
             ckpt['state_dict'] = new_state_dict
-            self.encoder.load_state_dict(
-                get_keys(ckpt, 'cond_stage_model'), strict=True)
+            encoder_state = get_keys(ckpt, 'cond_stage_model')
+            encoder_state.pop('transformer.vision_model.embeddings.position_ids', None)
+            self.encoder.load_state_dict(encoder_state, strict=True)
 
     def forward(self, x, y=None, batch_size=4, resize=True, latent_mask=None, input_code=False, randomize_noise=True,
                 inject_latent=None, return_latents=False, alpha=None, input_feature=False):
