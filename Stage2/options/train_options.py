@@ -47,6 +47,9 @@ class TrainOptions:
         self.parser.add_argument(
             '--learning_rate', default=0.0001, type=float, help='Optimizer learning rate')
         self.parser.add_argument(
+            '--lr_manifold', default=None, type=float,
+            help='Learning rate for geoopt manifold parameters. Defaults to learning_rate if unset.')
+        self.parser.add_argument(
             '--step_size', default=500, type=int, help='Step size for learning rate decay')
         self.parser.add_argument(
             '--gamma', default=0.5, type=float, help='Gamma for learning rate decay')
