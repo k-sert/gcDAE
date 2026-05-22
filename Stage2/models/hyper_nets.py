@@ -316,20 +316,38 @@ class MobiusLinear(torch.nn.Linear):
     
 
 class SphericalLinear(torch.nn.Module):
-    def __init__(self, in_features, out_features, k=1.0):
+    def __init__(
+            self,
+            in_features,
+            out_features,
+            k=1.0,
+            normalize_input=False,
+            max_tangent_radius_ratio=None):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.k = torch.tensor(k)
+        self.normalize_input = normalize_input
+        self.max_tangent_radius_ratio = max_tangent_radius_ratio
         self.weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         self.bias = torch.nn.Parameter(torch.Tensor(out_features))
         torch.nn.init.xavier_uniform_(self.weight)
         torch.nn.init.zeros_(self.bias)
 
     def forward(self, x):
-        # x is Euclidean; map to tangent space, then project
         k = self.k.type_as(x)
+        if self.normalize_input:
+            x = torch.nn.functional.layer_norm(x, x.shape[-1:])
         x_tangent = torch.nn.functional.linear(x, self.weight, self.bias)
+        if self.max_tangent_radius_ratio is not None and self.max_tangent_radius_ratio > 0:
+            max_norm = (
+                torch.as_tensor(self.max_tangent_radius_ratio, dtype=x.dtype, device=x.device)
+                * math.pi
+                / (2.0 * torch.sqrt(k))
+            )
+            norm = x_tangent.norm(dim=-1, keepdim=True).clamp_min(1e-15)
+            scale = max_norm * torch.tanh(norm / max_norm) / norm
+            x_tangent = x_tangent * scale
         return gmath.expmap0(x_tangent, k=k)
 
 class MobiusDist2Hyperplane(torch.nn.Module):

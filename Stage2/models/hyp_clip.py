@@ -346,7 +346,11 @@ class hae_clip(nn.Module):
         elif self.geometry == 'spherical':
             # Use the new layer instead of LogisticRegression
             self.spherical_linear = SphericalLinear(
-                self.feature_shape, self.feature_shape, k=self.spherical_curvature)
+                self.feature_shape,
+                self.feature_shape,
+                k=self.spherical_curvature,
+                normalize_input=True,
+                max_tangent_radius_ratio=0.7)
             self.spherical_classifier = SphericalPrototypeClassifier(
                 ball_dim=self.feature_shape,
                 n_classes=self.num_classes,
