@@ -9,6 +9,7 @@ import cv2
 sys.path.append(".")
 from configs import data_configs
 import numpy as np
+import torch
 
 
 class ImagesDataset(Dataset):
@@ -35,6 +36,13 @@ class ImagesDataset(Dataset):
 		self.source_transform = source_transform
 		self.target_transform = target_transform
 		self.train_transform = train_transform
+
+	def _prepare_image(self, image):
+		if torch.is_tensor(image):
+			return image.float()
+		image = np.array(image).astype(np.uint8)
+		image = (image / 127.5 - 1.0).astype(np.float32)
+		return np.transpose(image, (2, 0, 1))
 
 	def _get_split_roots(self, dataset_args, split):
 		if split == 'train':
@@ -74,18 +82,14 @@ class ImagesDataset(Dataset):
 		# to_im = Image.open(to_path).convert('RGB')
 		if self.target_transform:
 			to_im = self.target_transform(image=to_im)["image"]
-			to_im = np.array(to_im).astype(np.uint8)
-			to_im = (to_im / 127.5 - 1.0).astype(np.float32)
 			# to_im = Image.fromarray(to_im["image"])
 
 		if self.source_transform:
 			from_im = self.source_transform(image=from_im)["image"]
-			from_im = np.array(from_im).astype(np.uint8)
-			from_im = (from_im / 127.5 - 1.0).astype(np.float32)
 			# from_im = Image.fromarray(from_im["image"])
 		else:
 			from_im = to_im
-		from_im = np.transpose(from_im, (2, 0, 1))
-		to_im = np.transpose(to_im, (2, 0, 1))
+		from_im = self._prepare_image(from_im)
+		to_im = self._prepare_image(to_im)
 
 		return from_im, to_im, label
