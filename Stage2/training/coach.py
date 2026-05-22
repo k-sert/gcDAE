@@ -316,7 +316,9 @@ class Coach:
 
         # Dynamic fallback for learning rate variable naming conventions
         base_lr = getattr(self.opts, 'learning_rate', getattr(self.opts, 'lr', 0.001))
-        manifold_lr = getattr(self.opts, 'lr_manifold', base_lr * 10.0)
+        manifold_lr = getattr(self.opts, 'lr_manifold', None)
+        if manifold_lr is None:
+            manifold_lr = base_lr
 
         if self.opts.optim_name in ['adamw', 'riemannian_adam']:
             # Force RiemannianAdam if non-Euclidean parameters are present
