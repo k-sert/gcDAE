@@ -220,7 +220,7 @@ run_generation() {
     echo "  ckpt=${model_ckpt}"
     echo "  outdir=${outdir}"
 
-    srun python inference_for_eva.py \
+     srun /home/scur0164/conda_envs/hypdiff_env/bin/python inference_for_eva.py \
         --image_folder "${val_dir}" \
         --outdir "${outdir}" \
         --config_path "${config_path}" \
