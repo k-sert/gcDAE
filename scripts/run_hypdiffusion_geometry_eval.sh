@@ -180,7 +180,7 @@ submit_jobs() {
         local aggregate_job
         aggregate_job=$(sbatch \
             --parsable \
-            --partition=thin \
+            --partition=rome \
             --ntasks=1 \
             --cpus-per-task=1 \
             --time=00:10:00 \
