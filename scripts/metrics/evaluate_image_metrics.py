@@ -4,9 +4,9 @@ import itertools
 import json
 import random
 import re
+import shutil
 from pathlib import Path
 
-import lpips
 import numpy as np
 import torch
 from PIL import Image
@@ -22,6 +22,22 @@ HYPDIFFUSION_PREFIX_RE = re.compile(r"^\d+_(.+)$")
 def image_paths(root):
     root = Path(root)
     return sorted(p for p in root.rglob("*") if p.suffix.lower() in IMAGE_EXTS)
+
+
+def prepare_metric_images(root, prepared_root, size):
+    root = Path(root)
+    prepared_root = Path(prepared_root)
+    if prepared_root.exists():
+        shutil.rmtree(prepared_root)
+    prepared_root.mkdir(parents=True, exist_ok=True)
+    for index, src in enumerate(image_paths(root)):
+        rel = src.relative_to(root)
+        safe_name = "__".join(rel.parts)
+        dst = prepared_root / f"{index:06d}_{Path(safe_name).stem}.png"
+        with Image.open(src) as image:
+            image = image.convert("RGB").resize((size, size), Image.BICUBIC)
+            image.save(dst)
+    return str(prepared_root)
 
 
 def strip_hypdiffusion_prefix(relative_path):
@@ -80,6 +96,8 @@ def lpips_transform():
 
 
 def run_lpips_dataset(dataset, batch_size, workers, device):
+    import lpips
+
     if len(dataset) == 0:
         return None
 
@@ -175,6 +193,7 @@ def parse_args():
     parser.add_argument("--lpips_mode", choices=["paired", "diversity", "both"], default="paired")
     parser.add_argument("--lpips_max_pairs_per_class", type=int, default=1000)
     parser.add_argument("--lpips_seed", type=int, default=42)
+    parser.add_argument("--metric_image_size", type=int, default=299)
     return parser.parse_args()
 
 
@@ -189,15 +208,19 @@ def main():
         raise ValueError(f"No generated images found under {generated}")
     if num_reference == 0:
         raise ValueError(f"No reference images found under {reference}")
+    kid_subset_size = min(args.kid_subset_size, num_generated, num_reference)
+    prepared_base = Path(args.out).parent / "_prepared" / Path(args.out).stem
+    prepared_generated = prepare_metric_images(generated, prepared_base / "generated", args.metric_image_size)
+    prepared_reference = prepare_metric_images(reference, prepared_base / "reference", args.metric_image_size)
 
     fidelity = calculate_metrics(
-        input1=generated,
-        input2=reference,
+        input1=prepared_generated,
+        input2=prepared_reference,
         cuda=device.type == "cuda",
         batch_size=args.batch_size,
         fid=True,
         kid=True,
-        kid_subset_size=args.kid_subset_size,
+        kid_subset_size=kid_subset_size,
         kid_subsets=args.kid_subsets,
         prc=True,
         prc_neighborhood=args.pr_k,
