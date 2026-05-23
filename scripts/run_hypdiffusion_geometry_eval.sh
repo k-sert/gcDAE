@@ -16,7 +16,7 @@ set -euo pipefail
 # N_CLASSES=0 means "all classes" for HypDiffusion/inference_for_eva.py.
 
 MODE=${1:-dry-run}
-REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO_ROOT="/home/scur0164/HypDAE-private"
 SCRIPT_PATH="${REPO_ROOT}/scripts/run_hypdiffusion_geometry_eval.sh"
 
 SPLIT=${SPLIT:-test}
