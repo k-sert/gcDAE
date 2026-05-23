@@ -20,14 +20,14 @@ REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 SCRIPT_PATH="${REPO_ROOT}/scripts/run_hypdiffusion_geometry_eval.sh"
 
 SPLIT=${SPLIT:-test}
-STRENGTH=${STRENGTH:-0.95}
-SCALE=${SCALE:-1.3}
+STRENGTH=${STRENGTH:-0.2}
+SCALE=${SCALE:-1.0}
 DDIM_STEPS=${DDIM_STEPS:-50}
 DDIM_ETA=${DDIM_ETA:-0.0}
 SEED=${SEED:-23}
 N_SAMPLES=${N_SAMPLES:-1}
 N_PERTURB_SAMPLES=${N_PERTURB_SAMPLES:-0}
-N_SELECTED=${N_SELECTED:-5}
+N_SELECTED=${N_SELECTED:-10}
 N_CLASSES=${N_CLASSES:-0}
 WITH_METRICS=${WITH_METRICS:-1}
 LPIPS_MODE=${LPIPS_MODE:-both}
@@ -315,8 +315,8 @@ for path in sorted(metrics_root.glob("*.json")):
         "fid": fidelity.get("frechet_inception_distance"),
         "kid_mean": fidelity.get("kernel_inception_distance_mean"),
         "kid_std": fidelity.get("kernel_inception_distance_std"),
-        "precision": fidelity.get("precision"),
-        "recall": fidelity.get("recall"),
+        "precision": fidelity.get("precision_recall_precision"),
+        "recall":    fidelity.get("precision_recall_recall"),
         "lpips_paired": get_nested(lpips_data, "paired", "mean"),
         "lpips_diversity": get_nested(lpips_data, "diversity", "mean"),
         "json": str(path),
