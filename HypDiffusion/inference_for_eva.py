@@ -852,7 +852,7 @@ def main():
         count_class += 1
         print('finish {}/{} class'.format(count_class, n_classes))
         log_codecarbon_status(opt, codecarbon_state)
-        if count_class == n_classes:
+        if n_classes > 0 and count_class == n_classes:
             break
     print('Saved images to {}'.format(outdir))
     print(f"Your samples are ready and waiting for you \n"
