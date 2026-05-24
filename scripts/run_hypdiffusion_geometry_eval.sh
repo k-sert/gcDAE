@@ -20,7 +20,7 @@ REPO_ROOT="/home/scur0164/HypDAE-private"
 SCRIPT_PATH="${REPO_ROOT}/scripts/run_hypdiffusion_geometry_eval.sh"
 
 SPLIT=${SPLIT:-test}
-STRENGTH=${STRENGTH:-0.5}
+STRENGTH=${STRENGTH:-0.35}
 SCALE=${SCALE:-1.0}
 DDIM_STEPS=${DDIM_STEPS:-50}
 DDIM_ETA=${DDIM_ETA:-0.0}
@@ -170,12 +170,12 @@ submit_jobs() {
             --cpus-per-task="${CPUS_PER_TASK}" \
             --time="${METRICS_TIME}" \
             --array=0-5 \
-            --dependency="afterok:${gen_job}" \
+            --dependency="afterany:${gen_job}" \
             --job-name=hd_geom_metrics \
             --output="${LOG_DIR}/hypdiffusion_geometry_eval_metrics_%A_%a.out" \
             --export="${export_vars}" \
             "${SCRIPT_PATH}" metrics)
-        echo "Submitted metrics array: ${metrics_job} (afterok:${gen_job})"
+        echo "Submitted metrics array: ${metrics_job} (afterany:${gen_job})"
 
         local aggregate_job
         aggregate_job=$(sbatch \
@@ -184,12 +184,12 @@ submit_jobs() {
             --ntasks=1 \
             --cpus-per-task=1 \
             --time=00:10:00 \
-            --dependency="afterok:${metrics_job}" \
+            --dependency="afterany:${metrics_job}" \
             --job-name=hd_geom_aggregate \
             --output="${LOG_DIR}/hypdiffusion_geometry_eval_aggregate_%A.out" \
             --export="${export_vars}" \
             "${SCRIPT_PATH}" aggregate)
-        echo "Submitted aggregate job: ${aggregate_job} (afterok:${metrics_job})"
+        echo "Submitted aggregate job: ${aggregate_job} (afterany:${metrics_job})"
     fi
 }
 
@@ -249,6 +249,16 @@ run_metrics() {
     run_name=$(run_name_for "${dataset}" "${geometry}")
 
     local generated_dir="${OUTPUT_ROOT}/${run_name}"
+    
+    # Guard: check generated images exist
+    local n_images
+    n_images=$(find "${generated_dir}" -name "*.jpg" 2>/dev/null | wc -l)
+    if [ "${n_images}" -eq 0 ]; then
+        echo "No generated images found in ${generated_dir}, skipping metrics."
+        exit 1
+    fi
+    echo "Found ${n_images} generated images, proceeding with metrics."
+
     local reference_dir
     local out_json="${METRICS_ROOT}/${run_name}.json"
     reference_dir=$(dataset_dir_for "${dataset}")
