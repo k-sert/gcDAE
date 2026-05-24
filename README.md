@@ -36,7 +36,7 @@ conda env create -f Stage2/environment.yaml
 conda activate stage2_env
 
 # HypDiffusion generation
-conda env create -f HypDiffusion/hypdiff_env.yaml
+conda env create -f HypDiffusion/environment.yaml
 conda activate hypdiff_env
 ```
 
