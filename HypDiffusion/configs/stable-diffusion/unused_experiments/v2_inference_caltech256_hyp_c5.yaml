@@ -1,0 +1,70 @@
+model:
+  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  params:
+    parameterization: "eps"
+    linear_start: 0.00085
+    linear_end: 0.0120
+    num_timesteps_cond: 1
+    log_every_t: 200
+    timesteps: 1000
+    first_stage_key: "jpg"
+    cond_stage_key: "ref"
+    image_size: 64
+    channels: 4
+    cond_stage_trainable: true
+    conditioning_key: crossattn
+    scale_factor: 0.18215
+    use_ema: False
+
+    unet_config:
+      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      params:
+        use_checkpoint: True
+        use_fp16: False
+        image_size: 32
+        in_channels: 4
+        out_channels: 4
+        model_channels: 320
+        attention_resolutions: [ 4, 2, 1 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_head_channels: 64
+        use_spatial_transformer: True
+        use_linear_in_transformer: True
+        transformer_depth: 1
+        context_dim: 1024
+        legacy: False
+
+    first_stage_config:
+      target: ldm.models.autoencoder.AutoencoderKL
+      params:
+        embed_dim: 4
+        ddconfig:
+          double_z: true
+          z_channels: 4
+          resolution: 256
+          in_channels: 3
+          out_ch: 3
+          ch: 128
+          ch_mult: [ 1, 2, 4, 4 ]
+          num_res_blocks: 2
+          attn_resolutions: []
+          dropout: 0.0
+        lossconfig:
+          target: torch.nn.Identity
+
+    cond_stage_config:
+      target: ldm.modules.encoders.modules.HyperbolicCLIPImageEmbedder
+      params:
+        opts:
+          encoder_version: /scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
+          encoder_type: CLIPImageEmbedder
+          feature_size: 512
+          transformer_layers: 30
+          dataset_type: caltech256_encode
+          geometry: hyperbolic
+          c: 5
+          sample_mode: False
+          s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt
+          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp_c5/checkpoints/best_model.pt
+
