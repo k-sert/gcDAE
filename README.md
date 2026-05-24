@@ -1,37 +1,27 @@
-# Geometry-Aware Semantic Latent Spaces for Diffusion-Based Image Generation
+# GeoDiff: Geometry-Conditioned Latent Spaces for Diffusion-Based Generation
 
 <div align="center">
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert/geodiff-checkpoints/tree/main)
 
-**[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** . **[Casper Schuttrups](https://github.com/CasperWS)**
+**[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** · **[Casper Schuttrups](https://github.com/CasperWS)**
 
 *University of Amsterdam - Deep Learning 2, 2026*
 
 </div>
 
----
-
-<div align="center">
-  <img src="assets/Hierarchy.png" width="90%">
-</div>
-
-> **Abstract:** This project studies how the geometry of semantic latent spaces affects diffusion-based image generation. Starting from a two-stage HypDAE-style pipeline, we compare Euclidean, hyperbolic, and spherical Stage 2 representations for class-conditional image generation on hierarchical visual datasets. The goal is to understand whether geometry-aware latent spaces can provide better semantic structure, controllable diversity, and more meaningful perturbations than a purely Euclidean representation. In particular, the HypDiffusion generation code combines a Stage 1 diffusion checkpoint with a Stage 2 semantic encoder checkpoint to generate images while varying the geometry of the learned latent space.
-
-<div align="center">
-  <img src="assets/Poincare.png" width="45%"> <img src="assets/Pipeline.png" width="45%">
-</div>
+> **Abstract:** This project investigates how latent-space geometry influences diffusion-based image generation. Building upon a unified two-stage HypDAE-style framework, we systematically compare Euclidean, hyperbolic, and spherical conditioned latent spaces while keeping the underlying diffusion backbone fixed. We evaluate whether geometry-aware representations improve latent organization, controllable diversity, and latent perturbation behavior compared to conventional Euclidean embeddings, particularly on datasets with differing degrees of hierarchical structure. The HypDiffusion pipeline combines a Stage 1 diffusion backbone with geometry-specific Stage 2 encoders, enabling controlled image generation under varying latent curvature assumptions.
 
 ## 🛠️ Setup
 
-Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We adapt the original pipeline to compare Euclidean, hyperbolic, and spherical semantic latent spaces for CUB-200-2011 and Caltech-256.
+Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We adapt the original pipeline to compare Euclidean, hyperbolic, and spherical conditioned latent spaces for CUB-200-2011 and Caltech-256.
 
 ### Environment
 
 ```bash
 # Clone the repository
-git clone https://github.com/k-sert/HypDAE-private.git
-cd HypDAE-private
+git clone https://github.com/k-sert/GeoDiff.git
+cd GeoDiff
 ```
 
 Create the environment that matches the part of the project you want to run:
@@ -46,8 +36,8 @@ conda env create -f Stage2/environment.yaml
 conda activate stage2_env
 
 # HypDiffusion generation
-conda env create -f HypDiffusion/hypdae_env.yaml
-conda activate hypdae
+conda env create -f HypDiffusion/hypdiff_env.yaml
+conda activate hypdiff_env
 ```
 
 ### Model Weights
@@ -60,19 +50,21 @@ We use the following datasets for training and evaluation. Please download and u
 
 | Dataset | Link | Description |
 | :--- | :--- | :--- |
-| **CUB-200-2011** | [Download](https://dl.allaboutbirds.org/nabirds) | Fine-grained bird image dataset |
+| **CUB-200-2011** | [Download](https://www.vision.caltech.edu/datasets/cub_200_2011) | Fine-grained bird image dataset |
 | **Caltech-256** | [Download](https://data.caltech.edu/records/nyy15-4j048) | Object recognition dataset |
 
 **Recommended Directory Structure:**
 
 ```text
-HypDAE-private/
+GeoDiff/
 ├── HypDiffusion/
 ├── Stage1/
 ├── Stage2/
-├── data/
-│   ├── cub/
-│   └── caltech/
+├── scripts/
+├── checkpoints/
+├── datasets/
+│   ├── cub200/
+│   └── caltech256/
 └── ...
 ```
 
@@ -86,7 +78,7 @@ cd HypDiffusion
 python inference_for_eva.py \
   --config_path configs/stable-diffusion/v2_inference_[dataset]_[geometry]_[curvature].yaml \
   --ckpt /path/to/stage1_diffusion.ckpt \
-  --image_folder /path/to/data/cub/test \
+  --image_folder /path/to/data_folder \
   --outdir /path/to/output_folder
 ```
 
@@ -103,7 +95,7 @@ bash scripts/train_stage1_cub200.sh
 bash scripts/train_stage1_caltech256.sh
 ```
 
-**Stage 2** trains the semantic latent-space component on top of a Stage 1 checkpoint. Separate launch scripts are provided for Euclidean, hyperbolic, and spherical variants:
+**Stage 2** trains the latent-space conditioned component on top of a Stage 1 checkpoint. Separate launch scripts are provided for Euclidean, hyperbolic, and spherical variants:
 
 ```bash
 bash scripts/train_stage2_cub200_euc.sh
@@ -120,3 +112,11 @@ Before running the scripts, adjust dataset paths, checkpoint paths, and output d
 ## 🙏 Acknowledgments
 
 This project is based on [HypDAE](https://github.com/lingxiao-li/HypDAE) and [Hyperbolic-Flow-Matching](https://github.com/federicavaleau/Hyperbolic-Flow-Matching). We thank the authors for their open-source contributions.
+
+## 📜 License
+
+GeoDiff builds on Stable Diffusion 2.1 and follows the CreativeML Open RAIL++-M license terms for the diffusion backbone and derived checkpoints. The Stage 2 encoder uses OpenAI CLIP ViT-L/14 features; the OpenAI CLIP repository is released under the MIT License. Users should also comply with the dataset terms for CUB-200-2011 and Caltech-256.
+
+Please also refer to:
+- Stable Diffusion 2.1: https://huggingface.co/stabilityai/stable-diffusion-2-1-base
+- OpenAI CLIP: https://github.com/openai/CLIP
