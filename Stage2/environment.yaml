@@ -23,8 +23,3 @@ dependencies:
       - tensorboard==2.14.0
       - tqdm==4.67.1
       - transformers==4.30.0
-
-# Snellius note:
-# Stage 2 launch scripts should export the conda env lib directory before running
-# Python, otherwise cv2/albumentations may pick up an older system libstdc++:
-# export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH

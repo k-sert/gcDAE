@@ -43,7 +43,3 @@ dependencies:
       - streamlit==1.40.1
       - streamlit-drawable-canvas==0.9.3
       - git+https://github.com/openai/CLIP.git
-
-# Snellius note:
-# If cv2/albumentations fail with a libstdc++ symbol error, activate the env and run:
-# export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
