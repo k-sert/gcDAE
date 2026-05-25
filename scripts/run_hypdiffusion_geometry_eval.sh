@@ -54,6 +54,14 @@ dataset_label() {
     esac
 }
 
+geometry_arg_for() {
+    case "$1" in
+        euc) echo "euc" ;;
+        hyp_c1) echo "hyp" ;;
+        sph_c1) echo "sph" ;;
+    esac
+}
+
 geometry_label() {
     case "$1" in
         euc) echo "Euclidean" ;;
@@ -201,6 +209,9 @@ run_generation() {
     local geometry=${GEOMETRIES[$SLURM_ARRAY_TASK_ID]}
     local run_name
     run_name=$(run_name_for "${dataset}" "${geometry}")
+
+    local geometry_arg
+    geometry_arg=$(geometry_arg_for "${geometry}")
 
     local val_dir
     local config_path

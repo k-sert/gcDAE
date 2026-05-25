@@ -188,25 +188,25 @@ def feature_fusion(model, prompt_1, prompt_2, alpha):
     alpha: the fusion ratio between the two prompts, value: [0, 6.2126]
     
     outputs:
-    fused_hyp_code: the fused latent code in hyperbolic space
+    fused_geo_code: the fused latent code in hyperbolic space
     '''
-    _, _, _, hyp_code_1, _ = model.get_learned_conditioning(prompt_1)
-    _, _, _, hyp_code_2, _ = model.get_learned_conditioning(prompt_2)
-    rescaled_hyp_code_1 = rescale(alpha, hyp_code_1)
-    rescaled_hyp_code_2 = rescale(alpha, hyp_code_2)
-    delta_hyp_code_1 = mobius_add(hyp_code_1, -rescaled_hyp_code_1)
-    delta_hyp_code_2 = mobius_add(hyp_code_2, -rescaled_hyp_code_2)
-    fused_hyp_code = mobius_add(rescaled_hyp_code_1, delta_hyp_code_2)
-    return fused_hyp_code
+    _, _, _, geo_code_1, _ = model.get_learned_conditioning(prompt_1)
+    _, _, _, geo_code_2, _ = model.get_learned_conditioning(prompt_2)
+    rescaled_geo_code_1 = rescale(alpha, geo_code_1)
+    rescaled_geo_code_2 = rescale(alpha, geo_code_2)
+    delta_geo_code_1 = mobius_add(geo_code_1, -rescaled_geo_code_1)
+    delta_geo_code_2 = mobius_add(geo_code_2, -rescaled_geo_code_2)
+    fused_geo_code = mobius_add(rescaled_geo_code_1, delta_geo_code_2)
+    return fused_geo_code
 
 
-def get_hyp_codes(model, prompts):
+def get_geo_codes(model, prompts):
     # return latent codes in the hyperbolic space for the given prompts
     _, _, feature, feature_dist, _ = model.get_learned_conditioning(prompts)
     return feature, feature_dist
 
 
-def get_hyp_codes_given_feature(model, feature):
+def get_geo_codes_given_feature(model, feature):
     # return latent codes in the hyperbolic space for the given latent codes in CLIP space
     _, _, feature, feature_dist, _ = model.get_learned_conditioning(
         feature, input_feature=False, input_code=True)
@@ -220,10 +220,10 @@ def get_condition_given_feature(model, feature):
     return feature_euc
 
 
-def get_condition_given_hyp_codes(model, hyp_codes):
+def get_condition_given_geo_codes(model, geo_codes):
     # return latent codes in the CLIP space for the given latent codes in hyperbolic space
     _, _, _, _, feature_euc = model.get_learned_conditioning(
-        hyp_codes, input_feature=True)
+        geo_codes, input_feature=True)
     return feature_euc
 
 
@@ -415,6 +415,147 @@ def geo_perturbation(x, distances, perturb_codes, target_radius=6.2126, num_samp
 
     return feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances
 
+import torch
+
+def euc_perturbation(x, distances, perturb_codes, num_samples=None):
+    """
+    Euclidean fixed-step perturbation.
+
+    Args:
+        x: Tensor [1, D] reference point.
+        distances: iterable of floats/tensors (step sizes).
+        perturb_codes: iterable of Tensors [1, D] OR Tensor [N, D] (we'll handle both).
+        num_samples: unused (kept for API compatibility).
+
+    Returns:
+        (feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries,
+         dist_to_start, perturbation_distances)
+
+        feature_geo is returned as [] to match your prior signature.
+    """
+    assert x.ndim == 2 and x.shape[0] == 1, f"Expected x as [1,D], got {tuple(x.shape)}"
+
+    # Normalize perturb_codes input to a list of [1,D] tensors
+    if isinstance(perturb_codes, torch.Tensor):
+        if perturb_codes.ndim == 2:  # [N, D]
+            pc_list = [perturb_codes[i:i+1] for i in range(perturb_codes.shape[0])]
+        elif perturb_codes.ndim == 3 and perturb_codes.shape[1] == 1:  # [N,1,D]
+            pc_list = [perturb_codes[i] for i in range(perturb_codes.shape[0])]
+        else:
+            raise ValueError(f"Unexpected perturb_codes shape: {tuple(perturb_codes.shape)}")
+    else:
+        pc_list = list(perturb_codes)
+
+    feature_geo_normalized = []
+    feature_geo_current_target_boundaries = []
+    dist_to_start = []
+    perturbation_distances = []
+
+    eps = torch.tensor(1e-8, device=x.device, dtype=x.dtype)
+
+    for distance in distances:
+        distance_t = torch.as_tensor(distance, device=x.device, dtype=x.dtype).view(1, 1)  # broadcastable
+
+        for pc in pc_list:
+            if not isinstance(pc, torch.Tensor):
+                pc = torch.as_tensor(pc, device=x.device, dtype=x.dtype)
+            if pc.ndim == 1:
+                pc = pc.view(1, -1)
+            assert pc.shape == x.shape, f"perturb_code must match x shape {tuple(x.shape)}, got {tuple(pc.shape)}"
+
+            # Direction from x toward pc (point-to-point direction)
+            direction = pc - x
+            norm = torch.clamp(direction.norm(dim=-1, keepdim=True), min=eps)  # [1,1]
+            direction = direction / norm
+
+            perturbed = x + distance_t * direction  # [1,D]
+
+            feature_geo_normalized.append(perturbed)
+            feature_geo_current_target_boundaries.append(perturbed)
+
+            d = (perturbed - x).norm(dim=-1)  # [1]
+            dist_to_start.append(d)
+            perturbation_distances.append(d)
+
+    return [], feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances
+
+
+def sph_perturbation(x, distances, perturb_codes, num_samples=None, eps=1e-6):
+    """
+    Spherical fixed-geodesic-distance perturbation using geoopt Sphere manifold.
+    Moves from x toward each perturb_code along the great-circle geodesic.
+
+    Args:
+        x: Tensor [1, D] reference point (does not need to be normalized).
+        distances: iterable of floats/tensors (geodesic distances on the *unit* sphere, in radians).
+        perturb_codes: iterable of Tensors [1, D] OR Tensor [N, D] (we'll handle both).
+        num_samples: unused (kept for API compatibility).
+        eps: numerical stability threshold.
+
+    Returns:
+        Same tuple as euc_perturbation, with feature_geo = [] for signature compatibility.
+    """
+    import geoopt
+
+    assert x.ndim == 2 and x.shape[0] == 1, f"Expected x as [1,D], got {tuple(x.shape)}"
+    manifold = geoopt.manifolds.Sphere()
+
+    # Normalize perturb_codes input to a list of [1,D] tensors
+    if isinstance(perturb_codes, torch.Tensor):
+        if perturb_codes.ndim == 2:  # [N, D]
+            pc_list = [perturb_codes[i:i+1] for i in range(perturb_codes.shape[0])]
+        elif perturb_codes.ndim == 3 and perturb_codes.shape[1] == 1:  # [N,1,D]
+            pc_list = [perturb_codes[i] for i in range(perturb_codes.shape[0])]
+        else:
+            raise ValueError(f"Unexpected perturb_codes shape: {tuple(perturb_codes.shape)}")
+    else:
+        pc_list = list(perturb_codes)
+
+    # Unit-normalize x to lie on sphere
+    eps_t = torch.tensor(eps, device=x.device, dtype=x.dtype)
+    x_norm = x / torch.clamp(x.norm(dim=-1, keepdim=True), min=eps_t)
+
+    feature_geo_normalized = []
+    feature_geo_current_target_boundaries = []
+    dist_to_start = []
+    perturbation_distances = []
+
+    for distance in distances:
+        distance_t = torch.as_tensor(distance, device=x.device, dtype=x.dtype)  # scalar tensor
+
+        for pc in pc_list:
+            if not isinstance(pc, torch.Tensor):
+                pc = torch.as_tensor(pc, device=x.device, dtype=x.dtype)
+            if pc.ndim == 1:
+                pc = pc.view(1, -1)
+            assert pc.shape == x.shape, f"perturb_code must match x shape {tuple(x.shape)}, got {tuple(pc.shape)}"
+
+            # Unit-normalize target direction point
+            y_norm = pc / torch.clamp(pc.norm(dim=-1, keepdim=True), min=eps_t)
+
+            # Geodesic distance between x and y (unit sphere): tensor shape [1]
+            dist_xy = manifold.dist(x_norm, y_norm)  # [1]
+
+            # Compute fraction t in [0,1] such that moving t along logmap gives desired distance
+            # If y == x, logmap is ~0; set t=0.
+            dist_safe = torch.clamp(dist_xy, min=eps_t)
+            t = torch.clamp(distance_t / dist_safe, max=torch.tensor(1.0, device=x.device, dtype=x.dtype))  # [1]
+            t = torch.where(dist_xy > eps_t, t, torch.zeros_like(t))
+
+            log = manifold.logmap(x_norm, y_norm)  # [1,D]
+            perturbed = manifold.expmap(x_norm, t.view(1, 1) * log)  # [1,D]
+
+            # Ensure numerically on-sphere (optional but helpful)
+            perturbed = perturbed / torch.clamp(perturbed.norm(dim=-1, keepdim=True), min=eps_t)
+
+            feature_geo_normalized.append(perturbed)
+            feature_geo_current_target_boundaries.append(perturbed)
+
+            d = manifold.dist(x_norm, perturbed)  # [1]
+            dist_to_start.append(d)
+            perturbation_distances.append(d)
+
+    return [], feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -534,6 +675,14 @@ def main():
         help="path to the input image folder"
     )
 
+    parser.add_argument(
+    "--geometry",
+    type=str,
+    default="hyp",
+    choices=["euc", "hyp", "sph"],
+    help="Latent space geometry for perturbation",
+    )
+    
     parser.add_argument(
         "--outdir",
         type=str,
@@ -773,15 +922,25 @@ def main():
                     sampled_image = load_img(sampled_img, [224, 224]).to(device)
                     sampled_images.append(sampled_image)
 
-                _, hyp_code = get_hyp_codes(model, ref_image[0].unsqueeze(0))
-                _, perturb_codes = get_hyp_codes(model, sampled_images)
+                _, geo_code = get_geo_codes(model, ref_image[0].unsqueeze(0))
+                _, perturb_codes = get_geo_codes(model, sampled_images)
                 distances = [hyp_radius]
                 num_samples = len(sampled_images)
-                feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances = geo_perturbation(
-                    hyp_code, distances, target_radius=6.2126, perturb_codes=perturb_codes, num_samples=num_samples)
+                if opt.geometry == "hyp":
+                    distances = [opt.hyp_radius]
+                    feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances = geo_perturbation(
+                        geo_code, distances, target_radius=6.2126, perturb_codes=perturb_codes, num_samples=num_samples)
+                elif opt.geometry == "sph":
+                    distances = [opt.hyp_radius * (torch.pi / 6.2126)]
+                    feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances = sph_perturbation(
+                        geo_code, distances, perturb_codes=perturb_codes, num_samples=num_samples)
+                elif opt.geometry == "euc":
+                    distances = [opt.hyp_radius * 0.1]
+                    feature_geo, feature_geo_normalized, feature_geo_current_target_boundaries, dist_to_start, perturbation_distances = euc_perturbation(
+                        geo_code, distances, perturb_codes=perturb_codes, num_samples=num_samples)
                 for i in feature_geo_current_target_boundaries:
                     feature = repeat(i, '1 ... -> b ...', b=batch_size)
-                    feature_euc = get_condition_given_hyp_codes(model, feature)
+                    feature_euc = get_condition_given_geo_codes(model, feature)
                     perturbed_codes.append(feature_euc)
                     
             init_latent = model.get_first_stage_encoding(
