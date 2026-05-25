@@ -10,7 +10,7 @@
 
 </div>
 
-> **Abstract:** This project investigates how latent-space geometry influences diffusion-based image generation. Building upon a unified two-stage HypDAE-style framework, we systematically compare Euclidean, hyperbolic, and spherical conditioned latent spaces while keeping the underlying diffusion backbone fixed. We evaluate whether geometry-aware representations improve latent organization, controllable diversity, and latent perturbation behavior compared to conventional Euclidean embeddings, particularly on datasets with differing degrees of hierarchical structure. The HypDiffusion pipeline combines a Stage 1 diffusion backbone with geometry-specific Stage 2 encoders, enabling controlled image generation under varying latent curvature assumptions.
+> **Abstract:** We investigate how latent space geometry affects image generation quality and diversity by comparing Euclidean, hyperbolic, and spherical manifolds within a diffusion-based pipeline. Semantic codes extracted via CLIP are projected onto each geometry and used to condition a frozen Stable Diffusion backbone, enabling a controlled comparison where only the latent geometry varies. We evaluate on CUB-200-2011 (hierarchical bird species) and Caltech-256 (diverse object categories) using FID. Hyperbolic geometry yields lower FID on the hierarchically structured dataset, while Euclidean geometry matches or outperforms curved alternatives on the diverse benchmarks. Our results suggest that the benefit of non-Euclidean latent spaces is contingent on the semantic organisation of data.
 
 ## 🛠️ Setup
 
