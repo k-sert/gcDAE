@@ -20,7 +20,7 @@ Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We ada
 
 ```bash
 # Clone the repository
-git clone https://github.com/k-sert/gcDAE.git
+git clone https://github.com/damidirad/gcDAE.git
 cd gcDAE
 ```
 
