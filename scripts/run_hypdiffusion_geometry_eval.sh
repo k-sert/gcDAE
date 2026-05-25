@@ -27,11 +27,14 @@ DDIM_ETA=${DDIM_ETA:-0.0}
 SEED=${SEED:-23}
 N_SAMPLES=${N_SAMPLES:-1}
 N_PERTURB_SAMPLES=${N_PERTURB_SAMPLES:-4}
-N_SELECTED=${N_SELECTED:-5}
+N_SELECTED=${N_SELECTED:-3}
 N_CLASSES=${N_CLASSES:-0}
 WITH_METRICS=${WITH_METRICS:-1}
 LPIPS_MODE=${LPIPS_MODE:-both}
 RUN_TAG=${RUN_TAG:-$(date +%Y%m%d_%H%M%S)}
+HYP_DISTANCE=${HYP_DISTANCE:-5.6}
+SPH_DISTANCE=${SPH_DISTANCE:-0.5}
+EUC_DISTANCE=${EUC_DISTANCE:-0.2}
 
 OUTPUT_ROOT=${OUTPUT_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/geometry_eval_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
 METRICS_ROOT=${METRICS_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/geometry_eval_metrics_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
@@ -51,14 +54,6 @@ dataset_label() {
         cub200) echo "CUB200" ;;
         caltech256) echo "Caltech256" ;;
         *) echo "$1" ;;
-    esac
-}
-
-geometry_arg_for() {
-    case "$1" in
-        euc) echo "euc" ;;
-        hyp_c1) echo "hyp" ;;
-        sph_c1) echo "sph" ;;
     esac
 }
 
@@ -151,7 +146,7 @@ submit_jobs() {
     print_plan
 
     local export_vars
-    export_vars="ALL,SPLIT=${SPLIT},REPO_ROOT=${REPO_ROOT},STRENGTH=${STRENGTH},SCALE=${SCALE},DDIM_STEPS=${DDIM_STEPS},DDIM_ETA=${DDIM_ETA},SEED=${SEED},N_SAMPLES=${N_SAMPLES},N_PERTURB_SAMPLES=${N_PERTURB_SAMPLES},N_SELECTED=${N_SELECTED},N_CLASSES=${N_CLASSES},WITH_METRICS=${WITH_METRICS},LPIPS_MODE=${LPIPS_MODE},RUN_TAG=${RUN_TAG},OUTPUT_ROOT=${OUTPUT_ROOT},METRICS_ROOT=${METRICS_ROOT},CODECARBON_ROOT=${CODECARBON_ROOT},PARTITION=${PARTITION},GEN_TIME=${GEN_TIME},METRICS_TIME=${METRICS_TIME},CPUS_PER_TASK=${CPUS_PER_TASK},LOG_DIR=${LOG_DIR}"
+    export_vars="ALL,SPLIT=${SPLIT},REPO_ROOT=${REPO_ROOT},STRENGTH=${STRENGTH},HYP_DISTANCE=${HYP_DISTANCE},SPH_DISTANCE=${SPH_DISTANCE},EUC_DISTANCE=${EUC_DISTANCE},SCALE=${SCALE},DDIM_STEPS=${DDIM_STEPS},DDIM_ETA=${DDIM_ETA},SEED=${SEED},N_SAMPLES=${N_SAMPLES},N_PERTURB_SAMPLES=${N_PERTURB_SAMPLES},N_SELECTED=${N_SELECTED},N_CLASSES=${N_CLASSES},WITH_METRICS=${WITH_METRICS},LPIPS_MODE=${LPIPS_MODE},RUN_TAG=${RUN_TAG},OUTPUT_ROOT=${OUTPUT_ROOT},METRICS_ROOT=${METRICS_ROOT},CODECARBON_ROOT=${CODECARBON_ROOT},PARTITION=${PARTITION},GEN_TIME=${GEN_TIME},METRICS_TIME=${METRICS_TIME},CPUS_PER_TASK=${CPUS_PER_TASK},LOG_DIR=${LOG_DIR}"
 
     local gen_job
     gen_job=$(sbatch \
@@ -209,10 +204,6 @@ run_generation() {
     local geometry=${GEOMETRIES[$SLURM_ARRAY_TASK_ID]}
     local run_name
     run_name=$(run_name_for "${dataset}" "${geometry}")
-
-    local geometry_arg
-    geometry_arg=$(geometry_arg_for "${geometry}")
-
     local val_dir
     local config_path
     local model_ckpt
@@ -231,7 +222,7 @@ run_generation() {
     echo "  ckpt=${model_ckpt}"
     echo "  outdir=${outdir}"
 
-     srun /home/scur0164/conda_envs/hypdiff_env/bin/python inference_for_eva.py \
+    srun /home/scur0164/conda_envs/hypdiff_env/bin/python inference_for_eva.py \
         --image_folder "${val_dir}" \
         --outdir "${outdir}" \
         --config_path "${config_path}" \
@@ -245,11 +236,13 @@ run_generation() {
         --n_perturb_samples "${N_PERTURB_SAMPLES}" \
         --n_selected "${N_SELECTED}" \
         --n_classes "${N_CLASSES}" \
+        --hyp_distance "${HYP_DISTANCE}" \
+        --sph_distance "${SPH_DISTANCE}" \
+        --euc_distance "${EUC_DISTANCE}" \
         --use_codecarbon \
         --codecarbon_project_name "infer_hypdiffusion_${run_name}" \
         --codecarbon_output_dir "${CODECARBON_ROOT}/${run_name}"
 }
-
 run_metrics() {
     require_array_task
     setup_modules
