@@ -57,7 +57,7 @@ model:
       target: ldm.modules.encoders.modules.HyperbolicCLIPImageEmbedder
       params:
         opts:
-          encoder_version: /scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
+          encoder_version: /path/to/clip-vit-large-patch14  # set CKPT_ROOT/clip-vit-large-patch14
           encoder_type: CLIPImageEmbedder
           feature_size: 512
           transformer_layers: 30
@@ -65,5 +65,5 @@ model:
           geometry: euclidean
           c: 0
           sample_mode: False
-          s1_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
-          s2_checkpoint_path: /scratch-shared/scur0164/checkpoints/Stage2/cub200_euc_23037991/checkpoints/best_model.pt
+          s1_checkpoint_path: /path/to/stage1/checkpoint.ckpt  # set to your Stage 1 checkpoint
+          s2_checkpoint_path: /path/to/stage2/best_model.pt  # set to your Stage 2 best_model.pt

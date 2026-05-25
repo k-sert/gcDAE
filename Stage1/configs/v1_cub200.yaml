@@ -72,7 +72,7 @@ model:
     cond_stage_config:
       target: ldm.modules.encoders.modules.FrozenCLIPImageEmbedder
       params:
-        version: /scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
+        version: ${CKPT_ROOT}/clip-vit-large-patch14
 
 data:
   target: main.DataModuleFromConfig

@@ -1,29 +1,16 @@
 #!/bin/bash
+conda activate stage2_env
+export LD_LIBRARY_PATH=$(conda info --base)/envs/stage2_env/lib:$LD_LIBRARY_PATH
 
-#SBATCH --partition=gpu_h100
-#SBATCH --gpus=1
-#SBATCH --job-name=s2_cal_hyp_c10
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=12:00:00
-#SBATCH --output=logs/stage2_caltech256_hyp_c10_%A.out
-
-module purge
-module load 2025
-module load Miniconda3/25.5.1-1
-source $(conda info --base)/etc/profile.d/conda.sh
-conda activate /home/scur0164/conda_envs/stage2_env
-export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
-
-cd ${SLURM_SUBMIT_DIR}/Stage2
+cd "$(dirname "$0")/../../Stage2"
 
 # TODO: Set to best Stage 1 checkpoint after Stage 1 training completes
-STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt
-ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
-DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/caltech256_hyp_c10_${SLURM_JOB_ID}
+STAGE1_CKPT=${CKPT_ROOT}/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt
+ENCODER_VERSION=${CKPT_ROOT}/clip-vit-large-patch14
+DEST_DIR=${CKPT_ROOT}/Stage2/caltech256_hyp_c10_$(date +%Y%m%d_%H%M%S)
 CC_PROJECT_NAME=train_stage2_caltech256_hyp_c10
 
-srun python scripts/train.py \
+python scripts/train.py \
     --dataset_type=caltech256_encode \
     --stage1_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=${ENCODER_VERSION} \

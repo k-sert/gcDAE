@@ -39,9 +39,9 @@ WITH_METRICS=${WITH_METRICS:-1}
 LPIPS_MODE=${LPIPS_MODE:-both}
 RUN_TAG=${RUN_TAG:-$(date +%Y%m%d_%H%M%S)}
 
-OUTPUT_ROOT=${OUTPUT_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/setting_grid_${SPLIT}_${RUN_TAG}}
-METRICS_ROOT=${METRICS_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/setting_grid_metrics_${SPLIT}_${RUN_TAG}}
-CODECARBON_ROOT=${CODECARBON_ROOT:-/scratch-shared/scur0164/outputs/codecarbon/HypDiffusion/setting_grid_${RUN_TAG}}
+OUTPUT_ROOT=${OUTPUT_ROOT:-${OUTPUT_ROOT}/HypDiffusion/setting_grid_${SPLIT}_${RUN_TAG}}
+METRICS_ROOT=${METRICS_ROOT:-${OUTPUT_ROOT}/HypDiffusion/setting_grid_metrics_${SPLIT}_${RUN_TAG}}
+CODECARBON_ROOT=${CODECARBON_ROOT:-${OUTPUT_ROOT}/codecarbon/HypDiffusion/setting_grid_${RUN_TAG}}
 
 PARTITION=${PARTITION:-gpu_h100}
 GEN_TIME=${GEN_TIME:-00:30:00}
@@ -69,10 +69,10 @@ config_for() {
 stage1_ckpt_for() {
     case "$1" in
         cub200)
-            echo "/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt"
+            echo "${CKPT_ROOT}/Stage1/cub200/best_model.ckpt"
             ;;
         caltech256)
-            echo "/scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt"
+            echo "${CKPT_ROOT}/Stage1/caltech256/best_model.ckpt"
             ;;
         *)
             echo "Unknown dataset: $1" >&2
@@ -82,7 +82,7 @@ stage1_ckpt_for() {
 }
 
 dataset_dir_for() {
-    echo "/scratch-shared/scur0164/datasets/${1}_split/${SPLIT}"
+    echo "${DATA_ROOT}/${1}_split/${SPLIT}"
 }
 
 decode_task() {
@@ -111,12 +111,12 @@ require_array_task() {
 }
 
 setup_modules() {
-    module purge
-    module load 2025
-    module load Miniconda3/25.5.1-1
+    
+    
+    
     source "$(conda info --base)/etc/profile.d/conda.sh"
-    conda activate /home/scur0164/conda_envs/hypdiff_env
-    export LD_LIBRARY_PATH=/home/scur0164/conda_envs/hypdiff_env/lib:${LD_LIBRARY_PATH:-}
+    conda activate hypdiff_env
+    export LD_LIBRARY_PATH=$(conda info --base)/envs/hypdiff_env/lib:${LD_LIBRARY_PATH:-}
 }
 
 print_plan() {
@@ -220,7 +220,7 @@ run_generation() {
     echo "  strength=${STRENGTH}, scale=${SCALE}"
     echo "  outdir=${outdir}"
 
-    srun python inference_for_eva.py \
+    python inference_for_eva.py \
         --image_folder "${image_dir}" \
         --outdir "${outdir}" \
         --config_path "${config_path}" \

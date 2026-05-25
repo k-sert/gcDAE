@@ -1,25 +1,12 @@
 #!/bin/bash
-
-#SBATCH --partition=gpu_h100
-#SBATCH --gpus=1
-#SBATCH --job-name=eval_metrics
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=02:00:00
-#SBATCH --output=logs/eval_metrics_%A.out
-
 set -euo pipefail
 
-module purge
-module load 2025
-module load Miniconda3/25.5.1-1
-source $(conda info --base)/etc/profile.d/conda.sh
-conda activate /home/scur0164/conda_envs/hypdiff_env
-PYTHON_BIN=${PYTHON_BIN:-/home/scur0164/conda_envs/hypdiff_env/bin/python}
+conda activate hypdiff_env
+PYTHON_BIN=${PYTHON_BIN:-python}
 
-export MPLCONFIGDIR=/scratch-local/${SLURM_JOB_ID}/matplotlib
+export MPLCONFIGDIR=${TMPDIR:-/tmp}/matplotlib
 mkdir -p "${MPLCONFIGDIR}"
-FIDELITY_CACHE=/scratch-shared/scur0164/checkpoints/metric_cache/torch_fidelity
+FIDELITY_CACHE=${FIDELITY_CACHE:-${OUTPUTS_ROOT:-outputs}/metric_cache/torch_fidelity}
 mkdir -p "${FIDELITY_CACHE}"
 
 if [ "$#" -lt 3 ]; then
@@ -36,9 +23,9 @@ LPIPS_SEED=${LPIPS_SEED:-23}
 SKIP_LPIPS=${SKIP_LPIPS:-0}
 RUN_CODECARBON=${RUN_CODECARBON:-0}
 CODECARBON_PROJECT_NAME=${CODECARBON_PROJECT_NAME:-evaluate_image_metrics}
-CODECARBON_OUTPUT_DIR=${CODECARBON_OUTPUT_DIR:-/scratch-shared/scur0164/outputs/codecarbon/metrics/${SLURM_JOB_ID}}
+CODECARBON_OUTPUT_DIR=${CODECARBON_OUTPUT_DIR:-${OUTPUTS_ROOT:-outputs}/codecarbon/metrics/${SLURM_JOB_ID}}
 
-cd "${SLURM_SUBMIT_DIR}"
+cd "$(dirname "$0")/../../"
 
 echo "Using Python: ${PYTHON_BIN}"
 "${PYTHON_BIN}" - <<'PY'

@@ -1,29 +1,20 @@
 #!/bin/bash
+# Required env vars: CKPT_ROOT (checkpoint root), DATA_ROOT (dataset root)
+# Optional: STAGE1_CKPT (for Stage 2 scripts)
 
-#SBATCH --partition=gpu_h100
-#SBATCH --gpus=1
-#SBATCH --job-name=s2_cub_euc
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=12:00:00
-#SBATCH --output=logs/stage2_cub200_euc_%A.out
 
-module purge
-module load 2025
-module load Miniconda3/25.5.1-1
-source $(conda info --base)/etc/profile.d/conda.sh
-conda activate /home/scur0164/conda_envs/stage2_env
-export LD_LIBRARY_PATH=/home/scur0164/conda_envs/stage2_env/lib:$LD_LIBRARY_PATH
+conda activate stage2_env
+export LD_LIBRARY_PATH=$(conda info --base)/envs/stage2_env/lib:$LD_LIBRARY_PATH
 
-cd ${SLURM_SUBMIT_DIR}/Stage2
+cd "$(dirname "$0")/../../Stage2"
 
 # TODO: Set to best Stage 1 checkpoint after Stage 1 training completes
-STAGE1_CKPT=/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt
-ENCODER_VERSION=/scratch-shared/scur0164/checkpoints/clip-vit-large-patch14
-DEST_DIR=/scratch-shared/scur0164/checkpoints/Stage2/cub200_euc_${SLURM_JOB_ID}
-CC_PROJECT_NAME=train_stage2_cub200_euc
+STAGE1_CKPT=${STAGE1_CKPT}
+ENCODER_VERSION=${CKPT_ROOT}/clip-vit-large-patch14
+DEST_DIR=${CKPT_ROOT}/Stage2/cub200_hyp_c1_$(date +%Y%m%d_%H%M%S)
+CC_PROJECT_NAME=train_stage2_cub200_hyp_c1
 
-srun python scripts/train.py \
+python scripts/train.py \
     --dataset_type=cub200_encode \
     --stage1_checkpoint_path=${STAGE1_CKPT} \
     --encoder_version=${ENCODER_VERSION} \
@@ -31,8 +22,8 @@ srun python scripts/train.py \
     --seed 23 \
     --use_codecarbon \
     --codecarbon_project_name=${CC_PROJECT_NAME} \
-    --geometry euclidean \
-    --c=0 \
+    --geometry hyperbolic \
+    --c=1 \
     --feature_size=512 \
     --transformer_layers=30 \
     --train_all \
@@ -54,7 +45,7 @@ srun python scripts/train.py \
     --reverse_lambda=0.1 \
     --cosine_lambda=0.1 \
     --ngpus-per-node 1 \
-    --dist-url 'tcp://localhost:10039' \
+    --dist-url 'tcp://localhost:10040' \
     --multiprocessing-distributed \
     --dist-backend nccl \
     --world-size 1 \

@@ -16,7 +16,7 @@ set -euo pipefail
 # N_CLASSES=0 means "all classes" for HypDiffusion/inference_for_eva.py.
 
 MODE=${1:-dry-run}
-REPO_ROOT="/home/scur0164/HypDAE-private"
+REPO_ROOT="${HYPDAE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 SCRIPT_PATH="${REPO_ROOT}/scripts/run_hypdiffusion_geometry_eval.sh"
 
 SPLIT=${SPLIT:-test}
@@ -36,9 +36,9 @@ HYP_DISTANCE=${HYP_DISTANCE:-5.6}
 SPH_DISTANCE=${SPH_DISTANCE:-0.5}
 EUC_DISTANCE=${EUC_DISTANCE:-0.2}
 
-OUTPUT_ROOT=${OUTPUT_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/geometry_eval_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
-METRICS_ROOT=${METRICS_ROOT:-/scratch-shared/scur0164/outputs/HypDiffusion/geometry_eval_metrics_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
-CODECARBON_ROOT=${CODECARBON_ROOT:-/scratch-shared/scur0164/outputs/codecarbon/HypDiffusion/geometry_eval_${RUN_TAG}}
+OUTPUT_ROOT=${OUTPUT_ROOT:-${OUTPUTS_ROOT:-outputs}/HypDiffusion/geometry_eval_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
+METRICS_ROOT=${METRICS_ROOT:-${OUTPUTS_ROOT:-outputs}/HypDiffusion/geometry_eval_metrics_${SPLIT}_s${STRENGTH}_cfg${SCALE}_${RUN_TAG}}
+CODECARBON_ROOT=${CODECARBON_ROOT:-${OUTPUT_ROOT}/codecarbon/HypDiffusion/geometry_eval_${RUN_TAG}}
 
 PARTITION=${PARTITION:-gpu_h100}
 GEN_TIME=${GEN_TIME:-06:00:00}
@@ -76,10 +76,10 @@ stage1_ckpt_for() {
     local dataset=$1
     case "${dataset}" in
         cub200)
-            echo "/scratch-shared/scur0164/checkpoints/Stage1/cub200/2026-05-17T10-49-32_v1_cub200/checkpoints/epoch=000007.ckpt"
+            echo "${CKPT_ROOT}/Stage1/cub200/best_model.ckpt"
             ;;
         caltech256)
-            echo "/scratch-shared/scur0164/checkpoints/Stage1/caltech256/2026-05-17T10-49-13_v1_caltech256/checkpoints/epoch=000020.ckpt"
+            echo "${CKPT_ROOT}/Stage1/caltech256/best_model.ckpt"
             ;;
         *)
             echo "Unknown dataset: ${dataset}" >&2
@@ -90,7 +90,7 @@ stage1_ckpt_for() {
 
 dataset_dir_for() {
     local dataset=$1
-    echo "/scratch-shared/scur0164/datasets/${dataset}_split/${SPLIT}"
+    echo "${DATA_ROOT}/${dataset}_split/${SPLIT}"
 }
 
 run_name_for() {
@@ -111,12 +111,12 @@ require_array_task() {
 }
 
 setup_modules() {
-    module purge
-    module load 2025
-    module load Miniconda3/25.5.1-1
+    
+    
+    
     source "$(conda info --base)/etc/profile.d/conda.sh"
-    conda activate /home/scur0164/conda_envs/hypdiff_env
-    export LD_LIBRARY_PATH=/home/scur0164/conda_envs/hypdiff_env/lib:${LD_LIBRARY_PATH:-}
+    conda activate hypdiff_env
+    export LD_LIBRARY_PATH=$(conda info --base)/envs/hypdiff_env/lib:${LD_LIBRARY_PATH:-}
 }
 
 print_plan() {
@@ -230,7 +230,7 @@ run_generation() {
     *) echo "Unknown geometry: ${geometry}" >&2; exit 2 ;;
     esac
 
-    srun /home/scur0164/conda_envs/hypdiff_env/bin/python inference_for_eva.py \
+    python inference_for_eva.py \
         --image_folder "${val_dir}" \
         --outdir "${outdir}" \
         --config_path "${config_path}" \
