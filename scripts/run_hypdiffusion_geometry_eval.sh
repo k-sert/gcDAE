@@ -27,7 +27,7 @@ DDIM_ETA=${DDIM_ETA:-0.0}
 SEED=${SEED:-23}
 N_SAMPLES=${N_SAMPLES:-1}
 N_PERTURB_SAMPLES=${N_PERTURB_SAMPLES:-4}
-N_SELECTED=${N_SELECTED:-3}
+N_SELECTED=${N_SELECTED:-4}
 N_CLASSES=${N_CLASSES:-0}
 WITH_METRICS=${WITH_METRICS:-1}
 LPIPS_MODE=${LPIPS_MODE:-both}
@@ -222,6 +222,14 @@ run_generation() {
     echo "  ckpt=${model_ckpt}"
     echo "  outdir=${outdir}"
 
+    local extra_dist_args=()      
+    case "${geometry}" in
+    hyp_c1) extra_dist_args+=(--hyp_distance "${HYP_DISTANCE}") ;;
+    sph_c1) extra_dist_args+=(--sph_distance "${SPH_DISTANCE}") ;;
+    euc)    extra_dist_args+=(--euc_distance "${EUC_DISTANCE}") ;;
+    *) echo "Unknown geometry: ${geometry}" >&2; exit 2 ;;
+    esac
+
     srun /home/scur0164/conda_envs/hypdiff_env/bin/python inference_for_eva.py \
         --image_folder "${val_dir}" \
         --outdir "${outdir}" \
@@ -236,9 +244,7 @@ run_generation() {
         --n_perturb_samples "${N_PERTURB_SAMPLES}" \
         --n_selected "${N_SELECTED}" \
         --n_classes "${N_CLASSES}" \
-        --hyp_distance "${HYP_DISTANCE}" \
-        --sph_distance "${SPH_DISTANCE}" \
-        --euc_distance "${EUC_DISTANCE}" \
+        "${extra_dist_args[@]}" \
         --use_codecarbon \
         --codecarbon_project_name "infer_hypdiffusion_${run_name}" \
         --codecarbon_output_dir "${CODECARBON_ROOT}/${run_name}"
