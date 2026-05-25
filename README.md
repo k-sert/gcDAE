@@ -1,8 +1,8 @@
-# GeoDiff: Geometry-Conditioned Latent Spaces for Diffusion-Based Generation
+# gcDAE: Geometry-Conditioned Latent Spaces for Diffusion-Based Generation
 
 <div align="center">
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert/geodiff-checkpoints/tree/main)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert/gcDAE-checkpoints/tree/main)
 
 **[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** · **[Casper Schuttrups](https://github.com/CasperWS)**
 
@@ -20,8 +20,8 @@ Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We ada
 
 ```bash
 # Clone the repository
-git clone https://github.com/k-sert/GeoDiff.git
-cd GeoDiff
+git clone https://github.com/k-sert/gcDAE.git
+cd gcDAE
 ```
 
 Create the environment that matches the part of the project you want to run:
@@ -56,7 +56,7 @@ We use the following datasets for training and evaluation. Please download and u
 **Recommended Directory Structure:**
 
 ```text
-GeoDiff/
+gcDAE/
 ├── HypDiffusion/
 ├── Stage1/
 ├── Stage2/
@@ -115,7 +115,7 @@ This project is based on [HypDAE](https://github.com/lingxiao-li/HypDAE) and [Hy
 
 ## 📜 License
 
-GeoDiff builds on Stable Diffusion 2.1 and follows the CreativeML Open RAIL++-M license terms for the diffusion backbone and derived checkpoints. The Stage 2 encoder uses OpenAI CLIP ViT-L/14 features; the OpenAI CLIP repository is released under the MIT License. Users should also comply with the dataset terms for CUB-200-2011 and Caltech-256.
+gcDAE builds on Stable Diffusion 2.1 and follows the CreativeML Open RAIL++-M license terms for the diffusion backbone and derived checkpoints. The Stage 2 encoder uses OpenAI CLIP ViT-L/14 features; the OpenAI CLIP repository is released under the MIT License. Users should also comply with the dataset terms for CUB-200-2011 and Caltech-256.
 
 Please also refer to:
 - Stable Diffusion 2.1: https://huggingface.co/stabilityai/stable-diffusion-2-1-base
