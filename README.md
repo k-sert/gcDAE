@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert/gcDAE-checkpoints/tree/main)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-yellow)](https://huggingface.co/k-sert/gcDAE-checkpoints/)
 
 **[Kagan Sert](https://github.com/k-sert)** · **[Elyanne Oey](https://github.com/ElyanneOey)** · **[Daniël Amidirad](https://github.com/damidirad)** · **[Arthur van Campenhout](https://github.com/Arthurvc-uva)** · **[Casper Schuttrups](https://github.com/CasperWS)**
 
