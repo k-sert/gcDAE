@@ -55,7 +55,7 @@ Thumbs.db
 data/
 datasets/
 outputs/
-models/
+/models/
 weights/
 taming-transformers/
 *.pt
@@ -65,6 +65,7 @@ taming-transformers/
 
 # Environment / secrets
 .env.*
+!.env.example
 .env.local
 local_settings.py
 *.pem
@@ -79,3 +80,24 @@ Stage1/src/taming-transformers
 logs/
 scripts/logs/
 *.out
+
+# Local authentication and generated research artifacts
+.aws/
+.ssh/
+.netrc
+_netrc
+.pypirc
+credentials.json
+id_rsa*
+id_ed25519*
+*.p12
+*.pfx
+checkpoints/
+wandb/
+lightning_logs/
+codecarbon/
+emissions*.csv
+*.safetensors
+*.npy
+*.npz
+*.t7

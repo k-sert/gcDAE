@@ -26,8 +26,8 @@ if save_memory:
     enable_sliced_attention()
 
 # Configs
-resume_path = '/data2/mhf/DXL/Lingxiao/Cache/model_weight/anydoor/checkpoints/5-15-without-video/model-epoch=1-step=9999.ckpt'
-default_save_path = '/data2/mhf/DXL/Lingxiao/Cache/model_weight/anydoor/checkpoints/7-16-without-video'
+resume_path = os.environ.get('ANYDOOR_RESUME_PATH', '/path/to/anydoor/checkpoint.ckpt')
+default_save_path = os.environ.get('ANYDOOR_SAVE_PATH', '/path/to/anydoor/outputs')
 batch_size = 16
 logger_freq = 1000
 save_freq = 20

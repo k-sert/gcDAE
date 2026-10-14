@@ -5,7 +5,7 @@ import PIL
 import argparse
 import os
 import sys
-sys.path.insert(0, '/data2/mhf/DXL/Lingxiao/Codes/HypDiffusion')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ldm.models.diffusion.dpm_solver_org import DPMSolverSampler
 from ldm.models.diffusion.ddim_org import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler

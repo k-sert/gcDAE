@@ -16,7 +16,7 @@ class TrainOptions:
         self.parser.add_argument(
             '--encoder_type', default='CLIPImageEmbedder', type=str, help='Which encoder to use')
         self.parser.add_argument(
-            '--encoder_version', default='/data2/mhf/DXL/Lingxiao/Cache/huggingface/hub/models--openai--clip-vit-large-patch14', type=str, help='Which encoder version to use')
+            '--encoder_version', default='/path/to/clip-vit-large-patch14', type=str, help='Which encoder version to use')
         self.parser.add_argument('--geometry', default=None,
                                  choices=['euclidean', 'hyperbolic', 'spherical'],
                                  help='Geometry used by the Stage II feature bottleneck')

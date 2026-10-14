@@ -55,7 +55,6 @@ Thumbs.db
 data/
 datasets/
 outputs/
-models/
 weights/
 taming-transformers/
 *.pt
@@ -65,6 +64,7 @@ taming-transformers/
 
 # Environment / secrets
 .env.*
+!.env.example
 .env.local
 local_settings.py
 *.pem

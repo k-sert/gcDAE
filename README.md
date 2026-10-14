@@ -20,7 +20,7 @@ Our codebase is built on [HypDAE](https://github.com/lingxiao-li/HypDAE). We ada
 
 ```bash
 # Clone the repository
-git clone https://github.com/damidirad/gcDAE.git
+git clone https://github.com/k-sert/gcDAE.git
 cd gcDAE
 ```
 
@@ -39,6 +39,28 @@ conda activate stage2_env
 conda env create -f HypDiffusion/environment.yaml
 conda activate hypdiff_env
 ```
+
+### Local Paths
+
+Export absolute paths before running training or evaluation; `.env.example` lists
+the variables, but is not loaded automatically:
+
+```bash
+export DATA_ROOT=/absolute/path/to/datasets
+export CKPT_ROOT=/absolute/path/to/checkpoints
+export OUTPUTS_ROOT=/absolute/path/to/outputs
+export STAGE1_CKPT="$CKPT_ROOT/Stage1/cub200/best_model.ckpt"
+```
+
+Stage 1 YAML files resolve `CKPT_ROOT` through OmegaConf's `oc.env` resolver.
+Inference YAML files contain explicit `/path/to/` placeholders: set
+`encoder_version`, `s1_checkpoint_path`, and `s2_checkpoint_path` in the selected
+YAML before running inference. The `--ckpt` argument does not replace these fields.
+Constructor defaults are placeholders; pass a local CLIP model directory explicitly.
+Launch scripts expect an initialized Conda shell. Cluster evaluation scripts also
+require Slurm and site-appropriate partition settings.
+
+Only load trusted checkpoints: the existing pipeline uses PyTorch pickle loading.
 
 ### Model Weights
 
@@ -91,20 +113,20 @@ The project is organized as a two-stage pipeline.
 **Stage 1** trains the diffusion autoencoder backbone for the target dataset:
 
 ```bash
-bash scripts/train_stage1_cub200.sh
-bash scripts/train_stage1_caltech256.sh
+bash scripts/train/train_stage1_cub200.sh
+bash scripts/train/train_stage1_caltech256.sh
 ```
 
 **Stage 2** trains the latent-space conditioned component on top of a Stage 1 checkpoint. Separate launch scripts are provided for Euclidean, hyperbolic, and spherical variants:
 
 ```bash
-bash scripts/train_stage2_cub200_euc.sh
-bash scripts/train_stage2_cub200_hyp_c1.sh
-bash scripts/train_stage2_cub200_sph_c1.sh
+bash scripts/train/train_stage2_cub200_euc.sh
+bash scripts/train/train_stage2_cub200_hyp_c1.sh
+bash scripts/train/train_stage2_cub200_sph_c1.sh
 
-bash scripts/train_stage2_caltech256_euc.sh
-bash scripts/train_stage2_caltech256_hyp_c1.sh
-bash scripts/train_stage2_caltech256_sph_c1.sh
+bash scripts/train/train_stage2_caltech256_euc.sh
+bash scripts/train/train_stage2_caltech256_hyp_c1.sh
+bash scripts/train/train_stage2_caltech256_sph_c1.sh
 ```
 
 Before running the scripts, adjust dataset paths, checkpoint paths, and output directories to match your machine or cluster environment.
@@ -115,8 +137,10 @@ This project is based on [HypDAE](https://github.com/lingxiao-li/HypDAE) and [Hy
 
 ## 📜 License
 
-gcDAE builds on Stable Diffusion 2.1 and follows the CreativeML Open RAIL++-M license terms for the diffusion backbone and derived checkpoints. The Stage 2 encoder uses OpenAI CLIP ViT-L/14 features; the OpenAI CLIP repository is released under the MIT License. Users should also comply with the dataset terms for CUB-200-2011 and Caltech-256.
+gcDAE is made publicly available for academic reference and to showcase the research and implementation. No project-wide open-source license is granted for the original project code. Reuse, modification, or redistribution of these contributions requires permission from the respective copyright holders.
 
-Please also refer to:
+gcDAE builds on Stable Diffusion 2.1 and uses OpenAI CLIP ViT-L/14 features in its Stage 2 encoder. These components, along with other third-party code and assets, remain subject to their respective licenses and copyright notices. Users should also comply with the applicable dataset terms for CUB-200-2011 and Caltech-256.
+
+Please refer to:
 - Stable Diffusion 2.1: https://huggingface.co/stabilityai/stable-diffusion-2-1-base
 - OpenAI CLIP: https://github.com/openai/CLIP

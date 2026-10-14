@@ -17,7 +17,7 @@ set -euo pipefail
 
 MODE=${1:-dry-run}
 REPO_ROOT="${HYPDAE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-SCRIPT_PATH="${REPO_ROOT}/scripts/run_hypdiffusion_geometry_eval.sh"
+SCRIPT_PATH="${REPO_ROOT}/scripts/eval/run_hypdiffusion_geometry_eval.sh"
 
 SPLIT=${SPLIT:-test}
 STRENGTH=${STRENGTH:-0.35}
